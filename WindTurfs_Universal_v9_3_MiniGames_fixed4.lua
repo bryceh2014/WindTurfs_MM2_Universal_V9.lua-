@@ -576,6 +576,13 @@ end
 
 local PREMIUM = isPremium()
 
+-- Legacy flight was persisted by older builds. Never auto-enable a premium-only
+-- flight state from an old settings file for a standard account.
+if not PREMIUM then
+    State.Fly = false
+    State.PremiumFly = false
+end
+
 -- Persistent starter badges.
 unlockBadge("1") -- Welcome to WindTurf
 unlockBadge("13") -- First Load
@@ -2051,6 +2058,7 @@ do
             pcall(savePersistentData)
             Destroyed = true
             if _WT.CleanupFly then pcall(_WT.CleanupFly) end
+            if _WT.CleanupMiniGame then pcall(_WT.CleanupMiniGame) end
             disconnectAll()
 
             if MainGui then
@@ -2638,6 +2646,16 @@ do
     end
     choice("Safe Cracking","Rotate the dial and align three randomized tumblers.")
     choice("Lock Picking","Raise each pin until all five match their target heights.")
+end
+
+_WT.CleanupMiniGame = function()
+    if MiniGameOverlay then pcall(function() MiniGameOverlay:Destroy() end); MiniGameOverlay = nil end
+    if MiniGameIconGui then pcall(function() MiniGameIconGui:Destroy() end); MiniGameIconGui = nil end
+    MiniGameActive = false
+    MiniGameExit = nil
+    if ReopenButton and MainGui then
+        pcall(function() ReopenButton.Parent = MainGui; ReopenButton.Visible = false end)
+    end
 end
 
 --// NOTES / PATCH NOTES PAGE
