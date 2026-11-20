@@ -2839,7 +2839,7 @@ do
                     pin.BorderSizePixel = 0
                     pin.Parent=game; addCorner(pin,8)
                     local pg=Instance.new("UIGradient"); pg.Color=ColorSequence.new(Color3.fromRGB(42,53,73),Color3.fromRGB(13,18,29)); pg.Rotation=90; pg.Parent=pin
-                    addStroke(pin,Color3.fromRGB(100,115,140),1.2,0.12
+                    addStroke(pin,Color3.fromRGB(100,115,140),1.2,0.12)
 
                     local pinTitle = miniGameText(pin, "PIN "..i,
                         UDim2.new(1,0,0,24), UDim2.fromOffset(0,5), 11,
@@ -5813,7 +5813,7 @@ do
         if pointer then return end
         pointer,pointerType,startPos,lastPos,dragged=input,t,input.Position,input.Position,false
     end)
-    UserInputService.InputChanged:Connect(function(input)
+    connect("PathMapDragChanged", UserInputService.InputChanged, function(input)
         if not pointer then return end
         local pos
         if pointerType==Enum.UserInputType.Touch and input==pointer then pos=input.Position
@@ -5822,7 +5822,7 @@ do
         if (pos-startPos).Magnitude>9 then dragged=true end
         if dragged then PathMapPanOffset+=(pos-lastPos)*0.88; lastPos=pos; refreshPathMap(true) end
     end)
-    UserInputService.InputEnded:Connect(function(input)
+    connect("PathMapDragEnded", UserInputService.InputEnded, function(input)
         if not pointer then return end
         local ended=(pointerType==Enum.UserInputType.Touch and input==pointer)
             or (pointerType==Enum.UserInputType.MouseButton1 and input.UserInputType==Enum.UserInputType.MouseButton1)
