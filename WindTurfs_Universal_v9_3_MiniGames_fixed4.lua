@@ -104,7 +104,7 @@ end
 --//==============================================================
 --// CONFIGURATION
 --//==============================================================
-_WT.SOURCE_REVISION = "Universal_RedGalaxy_v9_2_CoinESP_Notes_Suggestions"
+_WT.SOURCE_REVISION = "Universal_RedGalaxy_v9_3_CoinESP_MiniGames"
 
 local CONFIG = {
     ScriptName = "WindTurf's Universal Script",
@@ -858,7 +858,7 @@ _WT.SidebarPadding.Parent = Sidebar
 _WT.SidebarBrand = Instance.new("TextLabel")
 _WT.SidebarBrand.Size = UDim2.new(1, -8, 0, 17)
 _WT.SidebarBrand.BackgroundTransparency = 1
-_WT.SidebarBrand.Text = "W  /  v8"
+_WT.SidebarBrand.Text = "W  /  v9.3"
 _WT.SidebarBrand.TextColor3 = Color3.fromRGB(255, 55, 78)
 _WT.SidebarBrand.Font = Enum.Font.GothamBlack
 _WT.SidebarBrand.TextSize = 8
@@ -2730,7 +2730,7 @@ do
     )
     noteCard(
         "CURRENT BUILD",
-        "v9.2 Red Galaxy • MM2 Coin ESP + Notes\nThe Coins tab marks detected MM2 coins visually. It does not automatically collect them. Some features depend on the game and executor APIs and may not work in every experience.",
+        "v9.3 Red Galaxy • MM2 Coin ESP + Mini Games\nThe Coins tab marks detected MM2 coins visually. MiniGames includes Safe Cracking and Lock Picking. Some features depend on the game and executor APIs and may not work in every experience.",
         91
     )
 end
