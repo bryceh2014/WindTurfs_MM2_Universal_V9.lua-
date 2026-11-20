@@ -104,7 +104,7 @@ end
 --//==============================================================
 --// CONFIGURATION
 --//==============================================================
-_WT.SOURCE_REVISION = "Universal_RedGalaxy_v9_3_CoinESP_MiniGames"
+_WT.SOURCE_REVISION = "Universal_RedGalaxy_v9_2_CoinESP_Notes_Suggestions"
 
 local CONFIG = {
     ScriptName = "WindTurf's Universal Script",
@@ -182,6 +182,8 @@ local State = {
     -- Combat
     AntiFling = true,
     Fly = false,
+    BasicFly = false,
+    PremiumFly = false,
     Noclip = false,
     SheriffAutoShoot = false,
     MurdererKillAll = false,
@@ -418,9 +420,6 @@ local FarmDebugStatus
 --[[ _WT.FarmDebugThreatDistance (forward decl removed) ]]
 local FarmDebugPhase
 local scanCoins
-local CurrentSuspiciousTarget = nil
-local FlyVelocity = nil
-local PrisonLifeFlyVelocity = nil
 
 -- Live Path Map UI / data
 local PathMapCanvas
@@ -858,7 +857,7 @@ _WT.SidebarPadding.Parent = Sidebar
 _WT.SidebarBrand = Instance.new("TextLabel")
 _WT.SidebarBrand.Size = UDim2.new(1, -8, 0, 17)
 _WT.SidebarBrand.BackgroundTransparency = 1
-_WT.SidebarBrand.Text = "W  /  v9.3"
+_WT.SidebarBrand.Text = "W  /  v8"
 _WT.SidebarBrand.TextColor3 = Color3.fromRGB(255, 55, 78)
 _WT.SidebarBrand.Font = Enum.Font.GothamBlack
 _WT.SidebarBrand.TextSize = 8
@@ -953,6 +952,8 @@ local function section(page, text)
     return label
 end
 
+local ToggleRefreshers = {}
+
 local function toggle(page, name, description, stateKey, callback, premiumOnly)
     local holder = Instance.new("TextButton")
     holder.Size = UDim2.new(1, -5, 0, 45)
@@ -1043,6 +1044,8 @@ local function toggle(page, name, description, stateKey, callback, premiumOnly)
         tween(knob, 0.12, {Position = enabled and UDim2.fromOffset(18, 3) or UDim2.fromOffset(3, 3)})
     end
 
+    ToggleRefreshers[page.Name .. "_" .. stateKey .. "_" .. name] = refresh
+
     connect("Toggle_" .. page.Name .. "_" .. stateKey .. "_" .. name, holder.MouseButton1Click, function()
         if premiumOnly and not PREMIUM then
             notify("Premium", "Premium access required.", 3)
@@ -1050,6 +1053,7 @@ local function toggle(page, name, description, stateKey, callback, premiumOnly)
         end
         State[stateKey] = not State[stateKey]
         if callback then pcall(callback, State[stateKey]) end
+        for _, refreshToggle in pairs(ToggleRefreshers) do pcall(refreshToggle) end
         pcall(savePersistentData)
         refresh()
     end)
@@ -1253,10 +1257,18 @@ do
 
     toggle(
         page,
+        "Basic Fly",
+        "Standard touch-friendly flight. Use the on-screen arrows to rise or descend.",
+        "BasicFly",
+        function(enabled) if enabled then State.Fly = false; State.PremiumFly = false end end
+    )
+
+    toggle(
+        page,
+        "Broken Fly",
+        "Legacy flight mode retained as-is; this mode is known to be unreliable.",
         "Fly",
-        "Free-flight movement for traversal and anti-fling situations.",
-        "Fly",
-        nil,
+        function(enabled) if enabled then State.BasicFly = false; State.PremiumFly = false end end,
         true
     )
 
@@ -1284,6 +1296,8 @@ do
         "Immediately stop combat, coin tracking and automated targeting.",
         function()
             State.Fly = false
+            State.BasicFly = false
+            State.PremiumFly = false
             State.PLFly = false
             State.Noclip = false
             State.NDSNoclip = false
@@ -1294,10 +1308,6 @@ do
             State.MurdererKillAll = false
             State.AutoFarm = false
             State.AutoCollect = false
-            CurrentSuspiciousTarget = nil
-            if FlyVelocity then pcall(function() FlyVelocity:Destroy() end); FlyVelocity = nil end
-            if PrisonLifeFlyVelocity then pcall(function() PrisonLifeFlyVelocity:Destroy() end); PrisonLifeFlyVelocity = nil end
-            pcall(savePersistentData)
             notify("WindTurf", "Emergency stop activated.", 3)
         end
     )
@@ -1452,7 +1462,6 @@ do
                 _WT.SuspiciousPlayers[player] = nil
             end
             _WT.CurrentSuspiciousTarget = nil
-            CurrentSuspiciousTarget = nil
             notify("Hunter", "Local hunter flags cleared.", 2)
         end
     )
@@ -1486,9 +1495,9 @@ do
     toggle(
         page,
         "Premium Fly",
-        "Enhanced flight control for map traversal.",
-        "Fly",
-        nil,
+        "Enhanced camera-relative flight with dedicated vertical controls.",
+        "PremiumFly",
+        function(enabled) if enabled then State.BasicFly = false; State.Fly = false end end,
         true
     )
 
@@ -1949,6 +1958,8 @@ do
         function()
             State.AntiFling = true
             State.Fly = false
+            State.BasicFly = false
+            State.PremiumFly = false
             State.Noclip = false
             State.SheriffAutoShoot = false
             State.MurdererKillAll = false
@@ -2039,57 +2050,8 @@ do
         function()
             pcall(savePersistentData)
             Destroyed = true
+            if _WT.CleanupFly then pcall(_WT.CleanupFly) end
             disconnectAll()
-
-            -- Restore local movement/physics before removing the interface.
-            for object, original in pairs(NoclipOriginalCollision) do
-                if object and object.Parent then
-                    pcall(function() object.CanCollide = original end)
-                end
-            end
-            table.clear(NoclipOriginalCollision)
-
-            if type(_WT.OriginalWorkspaceGravity) == "number" then
-                pcall(function() workspace.Gravity = _WT.OriginalWorkspaceGravity end)
-            end
-
-            for _, connectionName in ipairs({"NaturalDisasterJumpConnection", "PrisonLifeJumpConnection"}) do
-                local connection = _WT[connectionName]
-                if connection then
-                    pcall(function() connection:Disconnect() end)
-                    _WT[connectionName] = nil
-                end
-            end
-
-            if Character then
-                for _, object in ipairs(Character:GetDescendants()) do
-                    if object:IsA("BodyVelocity")
-                        and (object.Name == "WindTurfFlyVelocity" or object.Name == "WindTurfPrisonLifeFlyVelocity") then
-                        pcall(function() object:Destroy() end)
-                    elseif object:IsA("Highlight") and object.Name == "WindTurfESP" then
-                        pcall(function() object:Destroy() end)
-                    end
-                end
-            end
-
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player.Character then
-                    for _, object in ipairs(player.Character:GetDescendants()) do
-                        if object:IsA("Highlight") and object.Name == "WindTurfESP" then
-                            pcall(function() object:Destroy() end)
-                        end
-                    end
-                end
-            end
-
-            for _, holder in ipairs(windTurfGuiParents()) do
-                for _, guiName in ipairs({"WindTurfsMiniGame", "WindTurfsMiniGameIcon"}) do
-                    local extraGui = holder:FindFirstChild(guiName)
-                    if extraGui then
-                        pcall(function() extraGui:Destroy() end)
-                    end
-                end
-            end
 
             if MainGui then
                 MainGui:Destroy()
@@ -2506,30 +2468,6 @@ end
 local MiniGameOverlay, MiniGameIconGui, MiniGameExit, MiniGameActive = nil, nil, nil, false
 do
     local page = Pages.MiniGames
-
-    local function text(parent, value, size, pos, fontSize, color)
-        local t = Instance.new("TextLabel")
-        t.Size, t.Position = size, pos
-        t.BackgroundTransparency = 1
-        t.Text, t.TextColor3 = value, color or Color3.fromRGB(245,245,250)
-        t.Font, t.TextSize, t.TextWrapped = Enum.Font.GothamBold, fontSize or 14, true
-        t.Parent = parent
-        return t
-    end
-
-    local function btn(parent, value, pos, size, fn, muted)
-        local b = Instance.new("TextButton")
-        b.Size, b.Position = size, pos
-        b.BackgroundColor3 = muted and Color3.fromRGB(65,65,70) or Color3.fromRGB(220,12,40)
-        b.BorderSizePixel = 0
-        b.Text, b.TextColor3 = value, Color3.new(1,1,1)
-        b.Font, b.TextSize = Enum.Font.GothamBold, 14
-        b.Parent = parent
-        local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0,8); c.Parent = b
-        b.MouseButton1Click:Connect(fn)
-        return b
-    end
-
     section(page, "MINI GAMES")
     local intro = Instance.new("TextLabel")
     intro.Size = UDim2.new(1, -5, 0, 42)
@@ -2540,6 +2478,31 @@ do
     intro.Font = Enum.Font.Gotham
     intro.TextSize = 9
     intro.Parent = page
+
+    -- Page-scoped helpers are shared by the game choices and overlay.
+    local function miniGameText(parent, value, size, pos, fontSize, color)
+        local label = Instance.new("TextLabel")
+        label.Size, label.Position = size, pos
+        label.BackgroundTransparency = 1
+        label.Text, label.TextColor3 = value, color or Color3.fromRGB(245,245,250)
+        label.Font, label.TextSize, label.TextWrapped = Enum.Font.GothamBold, fontSize or 14, true
+        label.Parent = parent
+        return label
+    end
+    local function miniGameButton(parent, value, pos, size, fn, muted)
+        local button = Instance.new("TextButton")
+        button.Size, button.Position = size, pos
+        button.BackgroundColor3 = muted and Color3.fromRGB(65,65,70) or Color3.fromRGB(220,12,40)
+        button.BorderSizePixel = 0
+        button.Text, button.TextColor3 = value, Color3.new(1,1,1)
+        button.Font, button.TextSize = Enum.Font.GothamBold, 14
+        button.Parent = parent
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0,8)
+        corner.Parent = button
+        if type(fn) == "function" then button.MouseButton1Click:Connect(fn) end
+        return button
+    end
 
     local function overlay(gameName)
         if MiniGameOverlay then MiniGameOverlay:Destroy() end
@@ -2592,23 +2555,23 @@ do
             Main.Visible = false
         end
         MiniGameExit = closeGame
-        local x = btn(bg, "X", UDim2.new(1,-58,0,16), UDim2.fromOffset(42,42), closeGame)
+        local x = miniGameButton(bg, "X", UDim2.new(1,-58,0,16), UDim2.fromOffset(42,42), closeGame)
         x.TextSize, x.ZIndex = 22, 2100
 
         local warning = panel(UDim2.new(0.78,0,0.55,0), UDim2.new(0.11,0,0.22,0))
-        text(warning, "⚠  WARNING", UDim2.new(1,-30,0,42), UDim2.fromOffset(18,10), 25, Color3.fromRGB(255,35,55))
-        text(warning, "this minigame feature is untested and could fuck up your screen if it does please leave and rejoin and remember to report any issues you find to me in the suggestions tab",
+        miniGameText(warning, "⚠  WARNING", UDim2.new(1,-30,0,42), UDim2.fromOffset(18,10), 25, Color3.fromRGB(255,35,55))
+        miniGameText(warning, "this minigame feature is untested and could fuck up your screen if it does please leave and rejoin and remember to report any issues you find to me in the suggestions tab",
             UDim2.new(1,-40,1,-115), UDim2.fromOffset(20,58), 16)
-        local continue = btn(warning, "CONTINUE", UDim2.new(0.05,0,1,-58), UDim2.new(0.45,-8,0,40), function()
+        local continue = miniGameButton(warning, "CONTINUE", UDim2.new(0.05,0,1,-58), UDim2.new(0.45,-8,0,40), function()
             warning:Destroy()
             local game = panel(UDim2.new(0.94,0,0.82,0), UDim2.new(0.03,0,0.09,0))
-            text(game, gameName == "Safe Cracking" and "SAFE CRACKING" or "LOCK PICKING",
+            miniGameText(game, gameName == "Safe Cracking" and "SAFE CRACKING" or "LOCK PICKING",
                 UDim2.new(0.7,0,0,40), UDim2.fromOffset(18,10), 23)
-            btn(game, "EXIT", UDim2.fromOffset(18,0), UDim2.fromOffset(100,38), closeGame)
+            miniGameButton(game, "EXIT", UDim2.fromOffset(18,0), UDim2.fromOffset(100,38), closeGame)
 
             if gameName == "Safe Cracking" then
                 local value, stage, target = 0, 1, math.random(0,99)
-                local info = text(game, "Rotate the dial and stop on the correct number.\nTumblers: 1 / 3",
+                local info = miniGameText(game, "Rotate the dial and stop on the correct number.\nTumblers: 1 / 3",
                     UDim2.new(0.42,0,0,100), UDim2.fromOffset(18,65), 14)
                 local dial = Instance.new("TextButton")
                 dial.Size = UDim2.fromScale(0.42,0.62)
@@ -2622,9 +2585,9 @@ do
                     dial.Text = "◉\n\n" .. string.format("%02d",value)
                     info.Text = "Rotate the dial and stop on the correct number.\nTumblers: " .. stage .. " / 3"
                 end
-                btn(game,"◀",UDim2.new(0.05,0,0.48,0),UDim2.fromOffset(64,46),function() value=(value-1)%100; refresh() end,true)
-                btn(game,"▶",UDim2.new(0.30,0,0.48,0),UDim2.fromOffset(64,46),function() value=(value+1)%100; refresh() end,true)
-                btn(game,"SET POSITION",UDim2.new(0.05,0,0.67,0),UDim2.new(0.38,0,0,44),function()
+                miniGameButton(game,"◀",UDim2.new(0.05,0,0.48,0),UDim2.fromOffset(64,46),function() value=(value-1)%100; refresh() end,true)
+                miniGameButton(game,"▶",UDim2.new(0.30,0,0.48,0),UDim2.fromOffset(64,46),function() value=(value+1)%100; refresh() end,true)
+                miniGameButton(game,"SET POSITION",UDim2.new(0.05,0,0.67,0),UDim2.new(0.38,0,0,44),function()
                     local diff=math.min((value-target)%100,(target-value)%100)
                     if diff<=2 then
                         stage+=1
@@ -2635,7 +2598,7 @@ do
                 refresh()
             else
                 local count, values, targets = 5, {}, {}
-                local info = text(game,"Tap each pin to raise it until it matches its target height.",UDim2.new(0.35,0,0,105),UDim2.fromOffset(18,65),13)
+                local info = miniGameText(game,"Tap each pin to raise it until it matches its target height.",UDim2.new(0.35,0,0,105),UDim2.fromOffset(18,65),13)
                 local targetLine = "Target heights: "
                 for i=1,count do
                     targets[i]=math.random(1,4); values[i]=0
@@ -2659,7 +2622,7 @@ do
                 info.Text="Tap each pin to match its target height.\n"..targetLine
             end
         end)
-        btn(warning, "LEAVE", UDim2.new(0.52,0,1,-58), UDim2.new(0.43,-8,0,40), closeGame, true)
+        miniGameButton(warning, "LEAVE", UDim2.new(0.52,0,1,-58), UDim2.new(0.43,-8,0,40), closeGame, true)
     end
 
     local function choice(title, desc)
@@ -2669,9 +2632,9 @@ do
         card.BorderSizePixel=0; card.Parent=page
         local c=Instance.new("UICorner"); c.CornerRadius=UDim.new(0,9); c.Parent=card
         local st=Instance.new("UIStroke"); st.Color=Color3.fromRGB(100,25,42); st.Parent=card
-        text(card,title,UDim2.new(1,-115,0,25),UDim2.fromOffset(12,9),14)
-        text(card,desc,UDim2.new(1,-115,0,38),UDim2.fromOffset(12,37),9,Color3.fromRGB(160,170,190))
-        btn(card,"PLAY",UDim2.new(1,-100,0.5,-19),UDim2.fromOffset(88,38),function() overlay(title) end)
+        miniGameText(card,title,UDim2.new(1,-115,0,25),UDim2.fromOffset(12,9),14)
+        miniGameText(card,desc,UDim2.new(1,-115,0,38),UDim2.fromOffset(12,37),9,Color3.fromRGB(160,170,190))
+        miniGameButton(card,"PLAY",UDim2.new(1,-100,0.5,-19),UDim2.fromOffset(88,38),function() overlay(title) end)
     end
     choice("Safe Cracking","Rotate the dial and align three randomized tumblers.")
     choice("Lock Picking","Raise each pin until all five match their target heights.")
@@ -2730,7 +2693,7 @@ do
     )
     noteCard(
         "CURRENT BUILD",
-        "v9.3 Red Galaxy • MM2 Coin ESP + Mini Games\nThe Coins tab marks detected MM2 coins visually. MiniGames includes Safe Cracking and Lock Picking. Some features depend on the game and executor APIs and may not work in every experience.",
+        "v9.2 Red Galaxy • MM2 Coin ESP + Notes\nThe Coins tab marks detected MM2 coins visually. It does not automatically collect them. Some features depend on the game and executor APIs and may not work in every experience.",
         91
     )
 end
@@ -3338,12 +3301,7 @@ end
 Main.Visible = true
 Main.Size = UDim2.fromOffset(MENU_WIDTH, MENU_HEIGHT)
 
--- Commit the startup marker only after the loading screen and main window exist.
-pcall(function()
-    MainGui:SetAttribute("WindTurfStartupComplete", true)
-end)
-ENV.WindTurfMM2_CoinESP_RebuiltLoaded = true
-
+-- Startup is marked complete only after all initialization below succeeds.
 local function setGuiFade(root, fadeOut, duration)
     local targets = {}
     for _, obj in ipairs(root:GetDescendants()) do
@@ -3514,8 +3472,24 @@ end
 --//==============================================================
 _WT.SuspiciousPlayers = {}
 local SuspiciousPlayers = _WT.SuspiciousPlayers
+local CurrentSuspiciousTarget = nil
 _WT.LastHunterAlert = 0
 _WT.KnownSheriffUserId = nil
+local FlyVelocity = nil
+local PrisonLifeFlyVelocity = nil
+local ModernFlyVelocity, ModernFlyGyro = nil, nil
+local FlightControlGui = nil
+local FlightAscendHeld, FlightDescendHeld = false, false
+
+_WT.CleanupFly = function()
+    for _, mover in ipairs({ModernFlyVelocity,ModernFlyGyro,FlyVelocity,PrisonLifeFlyVelocity}) do
+        if mover then pcall(function() mover:Destroy() end) end
+    end
+    ModernFlyVelocity,ModernFlyGyro,FlyVelocity,PrisonLifeFlyVelocity = nil,nil,nil,nil
+    if FlightControlGui then pcall(function() FlightControlGui:Destroy() end); FlightControlGui = nil end
+    FlightAscendHeld,FlightDescendHeld = false,false
+end
+
 local function flagPlayer(player, reason)
     if not player or player == LocalPlayer then
         return
@@ -5544,6 +5518,12 @@ connect("MainRuntime", RunService.Heartbeat, function()
             Humanoid.WalkSpeed = math.clamp(tonumber(State.NDSWalkSpeedValue) or 32, 1, 200)
         end
 
+        if State.NDSLowGravity then
+            workspace.Gravity = math.clamp(_WT.OriginalWorkspaceGravity * 0.45, 20, _WT.OriginalWorkspaceGravity)
+        elseif workspace.Gravity ~= _WT.OriginalWorkspaceGravity and not State.NDSLowGravity then
+            workspace.Gravity = _WT.OriginalWorkspaceGravity
+        end
+
         if State.NDSNoclip and Character then
             for _, object in ipairs(Character:GetDescendants()) do
                 if object:IsA("BasePart") then
@@ -5556,71 +5536,143 @@ connect("MainRuntime", RunService.Heartbeat, function()
         end
     end
 
-    -- Workspace gravity is independent of character life state. Restore it
-    -- even while the local player is dead or respawning.
-    if type(_WT.OriginalWorkspaceGravity) == "number" then
-        if State.NDSLowGravity then
-            workspace.Gravity = math.clamp(_WT.OriginalWorkspaceGravity * 0.45, 20, _WT.OriginalWorkspaceGravity)
-        elseif workspace.Gravity ~= _WT.OriginalWorkspaceGravity then
-            workspace.Gravity = _WT.OriginalWorkspaceGravity
-        end
-    end
-
-    if State.PLFly and not State.Fly and isAlive() then
-        local camera = workspace.CurrentCamera
-        if camera and RootPart and Humanoid then
-            if not PrisonLifeFlyVelocity or PrisonLifeFlyVelocity.Parent ~= RootPart then
-                if PrisonLifeFlyVelocity then pcall(function() PrisonLifeFlyVelocity:Destroy() end) end
-                PrisonLifeFlyVelocity = Instance.new("BodyVelocity")
-                PrisonLifeFlyVelocity.Name = "WindTurfPrisonLifeFlyVelocity"
-                PrisonLifeFlyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-                PrisonLifeFlyVelocity.P = 12000
-                PrisonLifeFlyVelocity.Velocity = Vector3.zero
-                PrisonLifeFlyVelocity.Parent = RootPart
-            end
-            local direction = Humanoid.MoveDirection
-            local vertical = 0
-            if KeyboardEnabled then
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vertical += 1 end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then vertical -= 1 end
-            end
-            direction += Vector3.new(0, vertical, 0)
-            PrisonLifeFlyVelocity.Velocity = direction.Magnitude > 0 and direction.Unit * 45 or Vector3.zero
-        end
-    end
-
-    if State.Fly and isAlive() then
+    local modernFlyEnabled = State.PremiumFly or State.BasicFly
+    if modernFlyEnabled and isAlive() then
+        -- Touch thumbstick controls horizontal travel; on-screen arrows control height.
+        if FlyVelocity then pcall(function() FlyVelocity:Destroy() end); FlyVelocity = nil end
         if PrisonLifeFlyVelocity then pcall(function() PrisonLifeFlyVelocity:Destroy() end); PrisonLifeFlyVelocity = nil end
+        if TouchEnabled and (not FlightControlGui or not FlightControlGui.Parent) then
+            local controls = Instance.new("ScreenGui")
+            controls.Name = "WindTurfFlightControls"
+            controls.IgnoreGuiInset = true
+            controls.ResetOnSpawn = false
+            controls.DisplayOrder = 1800
+            controls.Parent = getGuiParent()
+            FlightControlGui = controls
+            local function makeFlightButton(name,symbol,yOffset)
+                local control = Instance.new("TextButton")
+                control.Name = name
+                control.Size = UDim2.fromOffset(58,48)
+                control.Position = UDim2.new(1,-76,0.58,yOffset)
+                control.BackgroundColor3 = Color3.fromRGB(24,9,16)
+                control.BackgroundTransparency = 0.12
+                control.BorderSizePixel = 0
+                control.Text = symbol
+                control.TextColor3 = Color3.new(1,1,1)
+                control.TextSize = 25
+                control.Font = Enum.Font.GothamBold
+                control.ZIndex = 20
+                control.Parent = controls
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(0,10)
+                corner.Parent = control
+                local stroke = Instance.new("UIStroke")
+                stroke.Color = Color3.fromRGB(245,35,65)
+                stroke.Thickness = 1.5
+                stroke.Parent = control
+                return control
+            end
+            local upButton = makeFlightButton("Ascend","▲",-54)
+            local downButton = makeFlightButton("Descend","▼",2)
+            upButton.MouseButton1Down:Connect(function() FlightAscendHeld = true end)
+            upButton.MouseButton1Up:Connect(function() FlightAscendHeld = false end)
+            downButton.MouseButton1Down:Connect(function() FlightDescendHeld = true end)
+            downButton.MouseButton1Up:Connect(function() FlightDescendHeld = false end)
+        end
         local camera = workspace.CurrentCamera
         if camera and RootPart and Humanoid then
-            if not FlyVelocity or FlyVelocity.Parent ~= RootPart then
-                if FlyVelocity then pcall(function() FlyVelocity:Destroy() end) end
-                FlyVelocity = Instance.new("BodyVelocity")
-                FlyVelocity.Name = "WindTurfFlyVelocity"
-                FlyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-                FlyVelocity.P = 18000
-                FlyVelocity.Velocity = Vector3.zero
-                FlyVelocity.Parent = RootPart
+            if not ModernFlyVelocity or ModernFlyVelocity.Parent ~= RootPart then
+                if ModernFlyVelocity then pcall(function() ModernFlyVelocity:Destroy() end) end
+                ModernFlyVelocity = Instance.new("BodyVelocity")
+                ModernFlyVelocity.Name = "WindTurfModernFlyVelocity"
+                ModernFlyVelocity.MaxForce = Vector3.new(1e6,1e6,1e6)
+                ModernFlyVelocity.P = 14000
+                ModernFlyVelocity.Velocity = Vector3.zero
+                ModernFlyVelocity.Parent = RootPart
             end
-            local direction = Vector3.zero
-            if KeyboardEnabled then
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction += camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction -= camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction -= camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction += camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then direction += Vector3.new(0,1,0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then direction -= Vector3.new(0,1,0) end
+            if not ModernFlyGyro or ModernFlyGyro.Parent ~= RootPart then
+                if ModernFlyGyro then pcall(function() ModernFlyGyro:Destroy() end) end
+                ModernFlyGyro = Instance.new("BodyGyro")
+                ModernFlyGyro.Name = "WindTurfModernFlyGyro"
+                ModernFlyGyro.MaxTorque = Vector3.new(1e6,1e6,1e6)
+                ModernFlyGyro.P = 9000
+                ModernFlyGyro.D = 500
+                ModernFlyGyro.Parent = RootPart
             end
-            if Humanoid.MoveDirection.Magnitude > 0 then direction += Humanoid.MoveDirection end
-            FlyVelocity.Velocity = direction.Magnitude > 0 and direction.Unit * 65 or Vector3.zero
+            local move = Humanoid.MoveDirection
+            local horizontal = Vector3.new(move.X,0,move.Z)
+            if horizontal.Magnitude > 1 then horizontal = horizontal.Unit end
+            local vertical = 0
+            if (KeyboardEnabled and UserInputService:IsKeyDown(Enum.KeyCode.Space)) or Humanoid.Jump or FlightAscendHeld then vertical += 1 end
+            if (KeyboardEnabled and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)) or FlightDescendHeld then vertical -= 1 end
+            local speed = State.PremiumFly and 78 or 46
+            ModernFlyVelocity.Velocity = horizontal * speed + Vector3.new(0,vertical * speed,0)
+            local look = camera.CFrame.LookVector
+            local flatLook = Vector3.new(look.X,0,look.Z)
+            if flatLook.Magnitude > 0.001 then ModernFlyGyro.CFrame = CFrame.lookAt(RootPart.Position,RootPart.Position + flatLook.Unit) end
+            pcall(function() Humanoid:ChangeState(Enum.HumanoidStateType.Freefall) end)
         end
-    elseif FlyVelocity then
-        pcall(function() FlyVelocity:Destroy() end)
-        FlyVelocity = nil
+    else
+        if ModernFlyVelocity then pcall(function() ModernFlyVelocity:Destroy() end); ModernFlyVelocity = nil end
+        if ModernFlyGyro then pcall(function() ModernFlyGyro:Destroy() end); ModernFlyGyro = nil end
+        if FlightControlGui then pcall(function() FlightControlGui:Destroy() end); FlightControlGui = nil end
+        FlightAscendHeld,FlightDescendHeld = false,false
+        if State.PLFly and not State.Fly and isAlive() then
+            local camera = workspace.CurrentCamera
+            if camera and RootPart and Humanoid then
+                if not PrisonLifeFlyVelocity or PrisonLifeFlyVelocity.Parent ~= RootPart then
+                    if PrisonLifeFlyVelocity then pcall(function() PrisonLifeFlyVelocity:Destroy() end) end
+                    PrisonLifeFlyVelocity = Instance.new("BodyVelocity")
+                    PrisonLifeFlyVelocity.Name = "WindTurfPrisonLifeFlyVelocity"
+                    PrisonLifeFlyVelocity.MaxForce = Vector3.new(1e6,1e6,1e6)
+                    PrisonLifeFlyVelocity.P = 12000
+                    PrisonLifeFlyVelocity.Velocity = Vector3.zero
+                    PrisonLifeFlyVelocity.Parent = RootPart
+                end
+                local direction = Humanoid.MoveDirection
+                local vertical = 0
+                if KeyboardEnabled then
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vertical += 1 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then vertical -= 1 end
+                end
+                direction += Vector3.new(0,vertical,0)
+                PrisonLifeFlyVelocity.Velocity = direction.Magnitude > 0 and direction.Unit * 45 or Vector3.zero
+            end
+        elseif PrisonLifeFlyVelocity then pcall(function() PrisonLifeFlyVelocity:Destroy() end); PrisonLifeFlyVelocity = nil end
+        if State.Fly and isAlive() then
+            if PrisonLifeFlyVelocity then pcall(function() PrisonLifeFlyVelocity:Destroy() end); PrisonLifeFlyVelocity = nil end
+            local camera = workspace.CurrentCamera
+            if camera and RootPart and Humanoid then
+                if not FlyVelocity or FlyVelocity.Parent ~= RootPart then
+                    if FlyVelocity then pcall(function() FlyVelocity:Destroy() end) end
+                    FlyVelocity = Instance.new("BodyVelocity")
+                    FlyVelocity.Name = "WindTurfBrokenFlyVelocity"
+                    FlyVelocity.MaxForce = Vector3.new(1e6,1e6,1e6)
+                    FlyVelocity.P = 18000
+                    FlyVelocity.Velocity = Vector3.zero
+                    FlyVelocity.Parent = RootPart
+                end
+                local direction = Vector3.zero
+                if KeyboardEnabled then
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction += camera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction -= camera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction -= camera.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction += camera.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then direction += Vector3.new(0,1,0) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then direction -= Vector3.new(0,1,0) end
+                end
+                if Humanoid.MoveDirection.Magnitude > 0 then direction += Humanoid.MoveDirection end
+                FlyVelocity.Velocity = direction.Magnitude > 0 and direction.Unit * 65 or Vector3.zero
+            end
+        elseif FlyVelocity then pcall(function() FlyVelocity:Destroy() end); FlyVelocity = nil end
     end
-    if (not State.PLFly or not isAlive()) and PrisonLifeFlyVelocity then
-        pcall(function() PrisonLifeFlyVelocity:Destroy() end)
-        PrisonLifeFlyVelocity = nil
+    if not isAlive() then
+        for _, mover in ipairs({ModernFlyVelocity,ModernFlyGyro,FlyVelocity,PrisonLifeFlyVelocity}) do
+            if mover then pcall(function() mover:Destroy() end) end
+        end
+        ModernFlyVelocity,ModernFlyGyro,FlyVelocity,PrisonLifeFlyVelocity = nil,nil,nil,nil
+        if FlightControlGui then pcall(function() FlightControlGui:Destroy() end); FlightControlGui = nil end
+        FlightAscendHeld,FlightDescendHeld = false,false
     end
 
     if PREMIUM and State.SheriffAutoShoot and _WT.LastRole == "Sheriff" then
@@ -5836,3 +5888,7 @@ task.spawn(function()
         end
     end
 end)
+
+-- Startup completion marker: deliberately last to prevent stale locks on errors.
+pcall(function() MainGui:SetAttribute("WindTurfStartupComplete", true) end)
+ENV.WindTurfMM2_CoinESP_RebuiltLoaded = true
