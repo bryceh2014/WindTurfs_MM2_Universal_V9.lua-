@@ -419,6 +419,8 @@ local FarmDebugStatus
 local FarmDebugPhase
 local scanCoins
 local CurrentSuspiciousTarget = nil
+local FlyVelocity = nil
+local PrisonLifeFlyVelocity = nil
 
 -- Live Path Map UI / data
 local PathMapCanvas
@@ -3514,9 +3516,6 @@ _WT.SuspiciousPlayers = {}
 local SuspiciousPlayers = _WT.SuspiciousPlayers
 _WT.LastHunterAlert = 0
 _WT.KnownSheriffUserId = nil
-local FlyVelocity = nil
-local PrisonLifeFlyVelocity = nil
-
 local function flagPlayer(player, reason)
     if not player or player == LocalPlayer then
         return
