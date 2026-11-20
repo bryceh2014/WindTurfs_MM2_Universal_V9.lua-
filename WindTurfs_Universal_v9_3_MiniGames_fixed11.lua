@@ -4585,7 +4585,7 @@ end
 -- coins, red = murderer danger area, blue = nearby map obstacles.
 -- It does not move the character by itself.
 local PATH_MAP_WORLD_RADIUS = 95
-local PathMapPanOffset = Vector2.zero
+_WT.PathMapPanOffset = Vector2.zero
 _WT.PATH_MAP_UPDATE_INTERVAL = 0.18
 _WT.LastPathMapUpdate = 0
 
@@ -4755,7 +4755,7 @@ local function refreshPathMap(force)
 
     local mapScale = pathMapPixelsPerStud(width, height)
     if mapScale <= 0 then return end
-    local center = RootPart.Position - Vector3.new(PathMapPanOffset.X / mapScale, 0, PathMapPanOffset.Y / mapScale)
+    local center = RootPart.Position - Vector3.new(_WT.PathMapPanOffset.X / mapScale, 0, _WT.PathMapPanOffset.Y / mapScale)
     local currentFloorY = pathMapGetCurrentFloorY(center)
 
     -- Subtle grid for the diagram.
@@ -5820,7 +5820,7 @@ do
         elseif pointerType==Enum.UserInputType.MouseButton1 and input.UserInputType==Enum.UserInputType.MouseMovement then pos=input.Position end
         if not pos then return end
         if (pos-startPos).Magnitude>9 then dragged=true end
-        if dragged then PathMapPanOffset+=(pos-lastPos)*0.88; lastPos=pos; refreshPathMap(true) end
+        if dragged then _WT.PathMapPanOffset+=(pos-lastPos)*0.88; lastPos=pos; refreshPathMap(true) end
     end)
     connect("PathMapDragEnded", UserInputService.InputEnded, function(input)
         if not pointer then return end
@@ -5833,7 +5833,7 @@ do
             local y=math.clamp(input.Position.Y-origin.Y,0,size.Y)
             local scale=pathMapPixelsPerStud(size.X,size.Y)
             if scale>0 then
-                local center=RootPart.Position-Vector3.new(PathMapPanOffset.X/scale,0,PathMapPanOffset.Y/scale)
+                local center=RootPart.Position-Vector3.new(_WT.PathMapPanOffset.X/scale,0,_WT.PathMapPanOffset.Y/scale)
                 local wx=center.X+(x-size.X*0.5)/scale
                 local wz=center.Z+(y-size.Y*0.5)/scale
                 TeleportPinPosition=Vector3.new(wx,center.Y,wz)
@@ -5995,7 +5995,7 @@ do
         "Refresh the diagram around your current character position.",
         function()
             LivePathTimestamp = 0
-            PathMapPanOffset = Vector2.zero
+            _WT.PathMapPanOffset = Vector2.zero
             refreshPathMap(true)
         end
     )
