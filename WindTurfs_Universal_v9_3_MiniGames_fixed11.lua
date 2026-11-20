@@ -5820,7 +5820,7 @@ do
         elseif pointerType==Enum.UserInputType.MouseButton1 and input.UserInputType==Enum.UserInputType.MouseMovement then pos=input.Position end
         if not pos then return end
         if (pos-startPos).Magnitude>9 then dragged=true end
-        if dragged then _WT.PathMapPanOffset+=(pos-lastPos)*0.88; lastPos=pos; refreshPathMap(true) end
+        if dragged then _WT._WT.PathMapPanOffset+=(pos-lastPos)*0.65; lastPos=pos; refreshPathMap(true) end
     end)
     connect("PathMapDragEnded", UserInputService.InputEnded, function(input)
         if not pointer then return end
