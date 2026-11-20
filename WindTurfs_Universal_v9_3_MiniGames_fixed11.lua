@@ -3284,7 +3284,7 @@ do
     local k,p="WindTurf_SpawnerNotice_fixed11","WindTurf/SpawnerNotice_fixed11.txt"
     local seen=ENV[k]==true
     if not seen then pcall(function() local f,g=ENV.isfile or isfile,ENV.readfile or readfile; if type(f)=="function" and type(g)=="function" and f(p) and g(p)=="seen" then seen=true end end) end
-    local function save() seen=true; ENV[k]=true; pcall(function() local m,w=ENV.makefolder or makefolder,ENV.writefile or writefile; if type(m)=="function" then m("WindTurf") end; if type(w)=="function" then w(p,"seen") end end) end
+    local function save() seen=true; ENV[k]=true; local m,w=ENV.makefolder or makefolder,ENV.writefile or writefile; if type(m)=="function" then pcall(m,"WindTurf") end; if type(w)=="function" then pcall(w,p,"seen") end end
     local function showNotes()
         for n,v in pairs(Pages) do v.Visible=n=="Notes" end
         for n,b in pairs(TabButtons) do local a=n=="Notes"; b.BackgroundColor3=a and Color3.fromRGB(198,13,39) or Color3.fromRGB(9,11,18); local l=b:FindFirstChildOfClass("TextLabel"); if l then l.TextColor3=a and Color3.new(1,1,1) or Color3.fromRGB(205,212,232) end end
