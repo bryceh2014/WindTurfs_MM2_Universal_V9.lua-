@@ -3320,7 +3320,7 @@ do
     refreshLiveInventoryImages()
     selected=it
     detail.Visible=true
-    info.Text=it.Name.."\\n"..it.Rarity.." • "..it.Type..(it.Added and ("\\nAdded: "..it.Added) or "")
+    info.Text=it.Name.."\n"..it.Rarity.." • "..it.Type..(it.Added and ("\nAdded: "..it.Added) or "")
     pic.Image=images[it.Name] or ""
     pic.ImageTransparency=0
     pic.Visible=images[it.Name]~=nil
@@ -3344,12 +3344,8 @@ local function rebuild()
   add.MouseButton1Click:Connect(function()
    if not selected then return end
    if added[selected.Name] then return end
-   local ok,detailMessage=addToMM2InventoryPreview(selected)
-   if not ok then
-    notify("MM2 Visual Spawner",detailMessage,4)
-    return
-   end
-   added[selected.Name]=true
+    local ok,detailMessage=addToMM2InventoryPreview(selected)
+added[selected.Name]=true
    local row=Instance.new("TextLabel")
    row.Name="PreviewItem_"..tostring(selected.Name):gsub("%W","_")
    row.Size=UDim2.new(1,-8,0,31)
@@ -3373,7 +3369,7 @@ local function rebuild()
      inv.CanvasPosition=Vector2.new(0,math.max(0,inv.AbsoluteCanvasSize.Y-inv.AbsoluteSize.Y))
     end
    end)
-   notify("Spawner",detailMessage..". Real inventory unchanged.",4)
+   notify("Spawner",ok and (detailMessage..". Real inventory unchanged.") or ("Added to WindTurf visual preview. "..detailMessage..". Real inventory unchanged."),4)
   end)
   search:GetPropertyChangedSignal("Text"):Connect(rebuild); rebuild()
  end
