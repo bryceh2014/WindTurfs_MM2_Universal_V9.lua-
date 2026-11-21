@@ -3125,13 +3125,21 @@ do
    if not playerGui then return nil end
    local candidates={}
    for _,obj in ipairs(playerGui:GetDescendants()) do
-    if obj:IsA("ScrollingFrame") then
+    if obj:IsA("ScrollingFrame") or obj:IsA("Frame") then
      local name=string.lower(obj.Name)
-     local parentName=obj.Parent and string.lower(obj.Parent.Name) or ""
      local score=0
+     local ancestor=obj.Parent
+     local depth=0
+     while ancestor and ancestor~=playerGui and depth<6 do
+      local ancestorName=string.lower(ancestor.Name)
+      if ancestorName:find("inventory",1,true) then score+=10 end
+      if ancestorName:find("item",1,true) or ancestorName:find("weapon",1,true) then score+=4 end
+      ancestor=ancestor.Parent
+      depth+=1
+     end
      if name:find("inventory",1,true) then score+=10 end
      if name:find("item",1,true) or name:find("weapon",1,true) then score+=6 end
-     if parentName:find("inventory",1,true) then score+=8 end
+     if obj:FindFirstChildOfClass("UIGridLayout") then score+=5 end
      if score>0 and obj.Visible and obj.AbsoluteSize.X>40 and obj.AbsoluteSize.Y>30 then
       table.insert(candidates,{Object=obj,Score=score})
      end
@@ -6395,7 +6403,8 @@ do
             local y = math.clamp(input.Position.Y - origin.Y, 0, size.Y)
             local scale = pathMapPixelsPerStud(size.X, size.Y)
             if scale > 0 then
-                local center = RootPart.Position - Vector3.new(
+                local anchor = PathMapPanAnchor or RootPart.Position
+                local center = anchor - Vector3.new(
                     _WT.PathMapPanOffset.X / scale, 0,
                     _WT.PathMapPanOffset.Y / scale
                 )
