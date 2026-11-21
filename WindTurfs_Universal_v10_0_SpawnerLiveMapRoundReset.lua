@@ -3120,6 +3120,86 @@ do
   local inv=Instance.new("ScrollingFrame"); inv.Name="VisualInventoryList"; inv.Size=UDim2.new(1,-5,0,88); inv.BackgroundColor3=Color3.fromRGB(7,10,18); inv.BorderSizePixel=0; inv.Active=true; inv.ScrollingEnabled=true; inv.ScrollBarThickness=5; inv.AutomaticCanvasSize=Enum.AutomaticSize.Y; inv.CanvasSize=UDim2.new(); inv.Parent=page
   local layout=Instance.new("UIListLayout"); layout.Padding=UDim.new(0,3); layout.SortOrder=Enum.SortOrder.LayoutOrder; layout.Parent=inv
   local selected,added=nil,{}
+  local function findMM2InventoryHost()
+   local playerGui=LocalPlayer:FindFirstChildOfClass("PlayerGui")
+   if not playerGui then return nil end
+   local candidates={}
+   for _,obj in ipairs(playerGui:GetDescendants()) do
+    if obj:IsA("ScrollingFrame") then
+     local name=string.lower(obj.Name)
+     local parentName=obj.Parent and string.lower(obj.Parent.Name) or ""
+     local score=0
+     if name:find("inventory",1,true) then score+=10 end
+     if name:find("item",1,true) or name:find("weapon",1,true) then score+=6 end
+     if parentName:find("inventory",1,true) then score+=8 end
+     if score>0 and obj.Visible and obj.AbsoluteSize.X>40 and obj.AbsoluteSize.Y>30 then
+      table.insert(candidates,{Object=obj,Score=score})
+     end
+    end
+   end
+   table.sort(candidates,function(a,b) return a.Score>b.Score end)
+   return candidates[1] and candidates[1].Object or nil
+  end
+  local function addToMM2InventoryPreview(it)
+   local host=findMM2InventoryHost()
+   if not host then return false,"Open MM2's Inventory first; no inventory item grid was found" end
+   local key="WindTurfVisual_"..tostring(it.Name):gsub("%W","_")
+   if host:FindFirstChild(key) then return true,"Already shown in MM2 inventory" end
+   local grid=host:FindFirstChildOfClass("UIGridLayout")
+   local tile=Instance.new("ImageButton")
+   tile.Name=key
+   tile.AutoButtonColor=false
+   tile.BackgroundColor3=Color3.fromRGB(24,27,39)
+   tile.BorderSizePixel=0
+   tile.Image=""
+   tile.Parent=host
+   if grid then
+    tile.Size=grid.CellSize
+    tile.LayoutOrder=100000+#host:GetChildren()
+   else
+    local template
+    for _,child in ipairs(host:GetChildren()) do
+     if child:IsA("GuiButton") and child.Visible then template=child break end
+    end
+    tile.Size=template and template.Size or UDim2.new(0,76,0,86)
+   end
+   local corner=Instance.new("UICorner")
+   corner.CornerRadius=UDim.new(0,6)
+   corner.Parent=tile
+   if images[it.Name] then
+    local image=Instance.new("ImageLabel")
+    image.Name="WindTurfVisualIcon"
+    image.Size=UDim2.new(1,-8,1,-28)
+    image.Position=UDim2.fromOffset(4,4)
+    image.BackgroundTransparency=1
+    image.Image=images[it.Name]
+    image.ScaleType=Enum.ScaleType.Fit
+    image.Parent=tile
+   else
+    local fallback=Instance.new("TextLabel")
+    fallback.Size=UDim2.new(1,-6,1,-28)
+    fallback.Position=UDim2.fromOffset(3,3)
+    fallback.BackgroundTransparency=1
+    fallback.Text=it.Type=="Gun" and "GUN" or "KNIFE"
+    fallback.TextColor3=Color3.fromRGB(255,105,135)
+    fallback.Font=Enum.Font.GothamBlack
+    fallback.TextSize=13
+    fallback.Parent=tile
+   end
+   local label=Instance.new("TextLabel")
+   label.Name="WindTurfVisualName"
+   label.Size=UDim2.new(1,-4,0,24)
+   label.Position=UDim2.new(0,2,1,-25)
+   label.BackgroundColor3=Color3.fromRGB(8,10,18)
+   label.BackgroundTransparency=0.12
+   label.Text=it.Name
+   label.TextColor3=Color3.new(1,1,1)
+   label.Font=Enum.Font.GothamBold
+   label.TextSize=8
+   label.TextWrapped=true
+   label.Parent=tile
+   return true,"Visual-only tile added to MM2's open inventory"
+  end
   local function choose(it) selected=it; detail.Visible=true; info.Text=it.Name.."\n"..it.Rarity.." • "..it.Type..(it.Added and ("\nAdded: "..it.Added) or ""); pic.Image=images[it.Name] or ""; pic.Visible=images[it.Name]~=nil; fallback.Visible=images[it.Name]==nil end
   local function rebuild()
    for _,v in ipairs(list:GetChildren()) do if v:IsA("GuiButton") or v.Name=="NoMatch" then v:Destroy() end end
@@ -3135,10 +3215,39 @@ do
    list.CanvasPosition=Vector2.zero
    if count==0 then local e=Instance.new("TextLabel"); e.Name="NoMatch"; e.Size=UDim2.new(1,-8,0,30); e.BackgroundTransparency=1; e.Text="No matching items"; e.TextColor3=Color3.new(1,1,1); e.Parent=list end
   end
-  add.MouseButton1Click:Connect(function() if not selected then return end; if added[selected.Name] then return end; added[selected.Name]=true
-   local row=Instance.new("TextLabel"); row.Name="PreviewItem_"..tostring(selected.Name):gsub("%W","_"); row.Size=UDim2.new(1,-8,0,31); row.BackgroundColor3=Color3.fromRGB(16,20,31); row.BorderSizePixel=0; row.LayoutOrder=#inv:GetChildren()+1; row.Text="  "..selected.Name.."  •  "..selected.Rarity.."  •  "..selected.Type.."  •  VISUAL ONLY"; row.TextColor3=Color3.new(1,1,1); row.Font=Enum.Font.GothamSemibold; row.TextSize=8; row.TextXAlignment=Enum.TextXAlignment.Left; row.Parent=inv
-   local rowCorner=Instance.new("UICorner"); rowCorner.CornerRadius=UDim.new(0,5); rowCorner.Parent=row
-   local n=0; for _ in pairs(added) do n+=1 end; invTitle.Text="VISUAL INVENTORY PREVIEW • "..n.." ITEMS"; task.defer(function() if inv and inv.Parent then inv.CanvasPosition=Vector2.new(0,math.max(0,inv.AbsoluteCanvasSize.Y-inv.AbsoluteSize.Y)) end end); notify("Spawner","Preview only. Your real inventory is unchanged.",3)
+  add.MouseButton1Click:Connect(function()
+   if not selected then return end
+   if added[selected.Name] then return end
+   local ok,detailMessage=addToMM2InventoryPreview(selected)
+   if not ok then
+    notify("MM2 Visual Spawner",detailMessage,4)
+    return
+   end
+   added[selected.Name]=true
+   local row=Instance.new("TextLabel")
+   row.Name="PreviewItem_"..tostring(selected.Name):gsub("%W","_")
+   row.Size=UDim2.new(1,-8,0,31)
+   row.BackgroundColor3=Color3.fromRGB(16,20,31)
+   row.BorderSizePixel=0
+   row.LayoutOrder=#inv:GetChildren()+1
+   row.Text="  "..selected.Name.."  •  "..selected.Rarity.."  •  "..selected.Type.."  •  VISUAL ONLY"
+   row.TextColor3=Color3.new(1,1,1)
+   row.Font=Enum.Font.GothamSemibold
+   row.TextSize=8
+   row.TextXAlignment=Enum.TextXAlignment.Left
+   row.Parent=inv
+   local rowCorner=Instance.new("UICorner")
+   rowCorner.CornerRadius=UDim.new(0,5)
+   rowCorner.Parent=row
+   local n=0
+   for _ in pairs(added) do n+=1 end
+   invTitle.Text="VISUAL INVENTORY PREVIEW • "..n.." ITEMS"
+   task.defer(function()
+    if inv and inv.Parent then
+     inv.CanvasPosition=Vector2.new(0,math.max(0,inv.AbsoluteCanvasSize.Y-inv.AbsoluteSize.Y))
+    end
+   end)
+   notify("Spawner",detailMessage..". Real inventory unchanged.",4)
   end)
   search:GetPropertyChangedSignal("Text"):Connect(rebuild); rebuild()
  end
