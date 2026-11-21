@@ -959,6 +959,9 @@ local TabInfo = {
     {"Premium", "★", "PREMIUM"},
     {"Notes", "▤", "NOTES"},
     {"Suggestions", "✎", "SUGGESTIONS"},
+    {"Universal", "◈", "UNIVERSAL"},
+    {"PrisonLife", "♜", "PRISON LIFE"},
+    {"NaturalDisasterSurvival", "☂", "NATURAL DISASTER"},
 }
 
 local PageArea = Instance.new("Frame")
