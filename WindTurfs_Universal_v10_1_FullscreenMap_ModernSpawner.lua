@@ -3195,7 +3195,7 @@ do
    local candidates={}
    for _,obj in ipairs(playerGui:GetDescendants()) do
     if obj:IsA("ScrollingFrame") or obj:IsA("Frame") then
-     local name=string.lower(obj.Name); local score=0; local ancestor=obj.Parent; local depth=0; local hasInventoryAncestor=false
+     local name=string.lower(obj.Name); local score=0; local ancestor=obj.Parent; local depth=0; local hasInventoryAncestor=name:find("inventory",1,true)~=nil
      while ancestor and ancestor~=playerGui and depth<8 do
       local ancestorName=string.lower(ancestor.Name)
       if ancestorName:find("inventory",1,true) then score+=18; hasInventoryAncestor=true end
