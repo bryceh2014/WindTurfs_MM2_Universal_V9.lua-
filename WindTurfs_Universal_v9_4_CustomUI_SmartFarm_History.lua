@@ -3513,7 +3513,7 @@ end
                     local pos=Vector3.new(tonumber(loc.X) or 0,tonumber(loc.Y) or 0,tonumber(loc.Z) or 0)
                     local params=RaycastParams.new(); params.FilterType=Enum.RaycastFilterType.Exclude; params.FilterDescendantsInstances=Character and {Character} or {}; params.RespectCanCollide=true
                     local hit=workspace:Raycast(pos+Vector3.new(0,12,0),Vector3.new(0,-500,0),params)
-                    if not hit or (hit.Position.Y>RootPart.Position.Y+2) then notify("Saved Location","No valid floor was found at this saved spot.",3); return end
+                    if not hit or math.abs(hit.Position.Y-pos.Y)>25 then notify("Saved Location","No nearby floor was found at this saved spot.",3); return end
                     local dest=Vector3.new(pos.X,hit.Position.Y+Humanoid.HipHeight+RootPart.Size.Y*.5+.1,pos.Z)
                     pcall(function() Character:PivotTo(CFrame.new(dest)*RootPart.CFrame.Rotation); RootPart.AssemblyLinearVelocity=Vector3.zero; RootPart.AssemblyAngularVelocity=Vector3.zero end)
                     notify("Saved Location","Move attempted. The server may reject client-side movement.",3)
