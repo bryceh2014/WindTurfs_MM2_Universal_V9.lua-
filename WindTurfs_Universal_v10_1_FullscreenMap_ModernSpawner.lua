@@ -3111,7 +3111,7 @@ do
   local raw={{"Seer","Godly","Knife"},{"Red Seer","Godly","Knife"},{"Blue Seer","Godly","Knife"},{"Purple Seer","Godly","Knife"},{"Orange Seer","Godly","Knife"},{"Yellow Seer","Godly","Knife"},{"Chroma Seer","Chroma Godly","Knife"},{"Gemstone","Godly","Knife"},{"Heartblade","Godly","Knife"},{"Luger","Godly","Gun"},{"Darkbringer","Godly","Gun"},{"Lightbringer","Godly","Gun"},{"Laser","Godly","Gun"},{"Shark","Godly","Gun"},{"Deathshard","Godly","Knife"},{"Fang","Godly","Knife"},{"Saw","Godly","Knife"},{"Slasher","Godly","Knife"},{"Tides","Godly","Knife"},{"Heat","Godly","Knife"},{"Nightblade","Godly","Knife"},{"Pixel","Godly","Knife"},{"Clockwork","Godly","Knife"},{"Virtual","Godly","Knife"},{"Blaster","Godly","Gun"},{"Amerilaser","Godly","Gun"},{"Old Glory","Godly","Knife"},{"Eternal","Godly","Knife"},{"Eternal II","Godly","Knife"},{"Eternal III","Godly","Knife"},{"Eternal IV","Godly","Knife"},{"Candy","Godly","Knife"},{"Sugar","Godly","Gun"},{"Chill","Godly","Knife"},{"Iceblaster","Godly","Gun"},{"Elderwood Blade","Godly","Knife"},{"Elderwood Revolver","Godly","Gun"},{"Candleflame","Godly","Knife"},{"Alienbeam","Godly","Knife","2025 Halloween"},{"Raygun","Godly","Gun","2025 Halloween"},{"Xenoknife","Godly","Knife","2025 Halloween"},{"Beachy","Godly","Knife","2026 Summer"},{"Sands","Godly","Gun","2026 Summer"},{"Icecream","Godly","Knife","2026 Summer"},{"Mortal","Godly","Knife","2026 Halloween"},{"Immortal","Godly","Gun","2026 Halloween"},{"Embersickle","Godly","Knife","2026 Halloween"},{"Batwing","Ancient","Knife"},{"Icewing","Ancient","Knife"},{"Hallowscythe","Ancient","Knife"},{"Harvester","Ancient","Gun"},{"Icepiercer","Ancient","Gun"},{"Nik's Scythe","Unique","Knife"}}
   local items={}; for _,v in ipairs(raw) do table.insert(items,{Name=v[1],Rarity=v[2],Type=v[3],Added=v[4]}) end
   local images={}
-  local imageFields={image=true,imageid=true,icon=true,iconid=true,image_id=true,icon_id=true,texture=true,textureid=true,assetid=true,imageasset=true,iconasset=true,thumbnail=true,thumb=true}
+  local imageFields={image=true,imageid=true,icon=true,iconid=true,image_id=true,icon_id=true,texture=true,textureid=true,assetid=true,imageasset=true,imageassetid=true,iconasset=true,iconassetid=true,iconimage=true,thumbnail=true,thumbnailid=true,thumb=true,imageurl=true}
   local function normalizeImage(value)
    if type(value)=="number" then if value>0 then return "rbxassetid://"..tostring(math.floor(value)) end; return nil end
    if type(value)~="string" then return nil end
@@ -3204,7 +3204,31 @@ do
      end
     end)
    end
-  local search=Instance.new("TextBox"); search.Size=UDim2.new(1,-5,0,32); search.BackgroundColor3=Color3.fromRGB(12,16,27); search.PlaceholderText="Search Godly, Ancient, or Unique items"; search.Text=""; search.ClearTextOnFocus=false; search.TextColor3=Color3.new(1,1,1); search.Font=Enum.Font.Gotham; search.TextSize=10; search.Parent=page
+   local function scanItemCardImages()
+    pcall(function()
+     local playerGui=LocalPlayer:FindFirstChildOfClass("PlayerGui")
+     if not playerGui then return end
+     for _,container in ipairs(playerGui:GetDescendants()) do
+      if container:IsA("ImageButton") or container:IsA("TextButton") or container:IsA("Frame") then
+       local context=string.lower(container.Name)
+       local candidateImages={}
+       for _,child in ipairs(container:GetChildren()) do
+        if child:IsA("TextLabel") or child:IsA("TextButton") then context=context.." "..string.lower(tostring(child.Text or "")) end
+        if child:IsA("ImageLabel") or child:IsA("ImageButton") then
+         local image=normalizeImage(child.Image)
+         if image then table.insert(candidateImages,image) end
+        end
+       end
+       local normalizedContext=context:gsub("[^%w]","")
+       for _,it in ipairs(items) do
+        local key=string.lower(it.Name):gsub("[^%w]","")
+        if key~="" and normalizedContext:find(key,1,true) and #candidateImages>0 then assignItemImage(it.Name,candidateImages[1]) end
+       end
+      end
+     end
+    end)
+   end
+     local search=Instance.new("TextBox"); search.Size=UDim2.new(1,-5,0,32); search.BackgroundColor3=Color3.fromRGB(12,16,27); search.PlaceholderText="Search Godly, Ancient, or Unique items"; search.Text=""; search.ClearTextOnFocus=false; search.TextColor3=Color3.new(1,1,1); search.Font=Enum.Font.Gotham; search.TextSize=10; search.Parent=page
   local list=Instance.new("ScrollingFrame"); list.Size=UDim2.new(1,-5,0,175); list.BackgroundColor3=Color3.fromRGB(7,10,18); list.BorderSizePixel=0; list.ScrollBarThickness=5; list.AutomaticCanvasSize=Enum.AutomaticSize.Y; list.CanvasSize=UDim2.new(); list.Parent=page
   local grid=Instance.new("UIGridLayout"); grid.CellSize=UDim2.new(.48,0,0,68); grid.CellPadding=UDim2.fromOffset(5,5); grid.Parent=list
   local detail=Instance.new("Frame"); detail.Size=UDim2.new(1,-5,0,105); detail.BackgroundColor3=Color3.fromRGB(12,16,27); detail.Visible=false; detail.Parent=page
@@ -3318,6 +3342,7 @@ do
   end
    local function choose(it)
     refreshLiveInventoryImages()
+    scanItemCardImages()
     selected=it
     detail.Visible=true
     info.Text=it.Name.."\n"..it.Rarity.." • "..it.Type..(it.Added and ("\nAdded: "..it.Added) or "")
@@ -3327,6 +3352,8 @@ do
     fallback.Visible=images[it.Name]==nil
    end
 local function rebuild()
+    refreshLiveInventoryImages()
+    scanItemCardImages()
     refreshLiveInventoryImages()
    for _,v in ipairs(list:GetChildren()) do if v:IsA("GuiButton") or v.Name=="NoMatch" then v:Destroy() end end
    local q=string.lower(search.Text); local count=0
@@ -3344,7 +3371,9 @@ local function rebuild()
   add.MouseButton1Click:Connect(function()
    if not selected then return end
    if added[selected.Name] then return end
-    local ok,detailMessage=addToMM2InventoryPreview(selected)
+    local callOk,addedToMM2,detailMessage=pcall(addToMM2InventoryPreview,selected)
+    local ok=callOk and addedToMM2==true
+    if not callOk then detailMessage="MM2 inventory preview error: "..tostring(addedToMM2) end
 added[selected.Name]=true
    local row=Instance.new("TextLabel")
    row.Name="PreviewItem_"..tostring(selected.Name):gsub("%W","_")
@@ -3369,7 +3398,7 @@ added[selected.Name]=true
      inv.CanvasPosition=Vector2.new(0,math.max(0,inv.AbsoluteCanvasSize.Y-inv.AbsoluteSize.Y))
     end
    end)
-   notify("Spawner",ok and (detailMessage..". Real inventory unchanged.") or ("Added to WindTurf visual preview. "..detailMessage..". Real inventory unchanged."),4)
+   notify("Spawner",ok and (detailMessage..". Real inventory unchanged.") or ("Added to WindTurf visual preview. "..tostring(detailMessage or "MM2 inventory panel was unavailable")..". Real inventory unchanged."),4)
   end)
   search:GetPropertyChangedSignal("Text"):Connect(rebuild); rebuild()
  end
