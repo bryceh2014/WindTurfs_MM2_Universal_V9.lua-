@@ -244,6 +244,8 @@ local State = {
     FarmPreferShortPath = true,
     MenuTheme = "Red",
     MenuBgHex = "080A12",
+    MenuPanelHex = "0D101B",
+    MenuSidebarHex = "05070D",
     MenuTextHex = "EDEFF8",
     MenuAccentHex = "FF294F",
     MenuFont = "Gotham",
@@ -274,7 +276,7 @@ local PERSIST_KEYS = {
     "CrosshairColor", "CrosshairDesign",
     "PathDiagram", "PathDiagramCoins", "PathDiagramDanger", "PathDiagramObstacles", "PathDiagramPlayers",
     "LifetimeCoins", "Sessions", "FarmDangerRadius", "FarmSafeRadius", "FarmCandidateLimit", "FarmPreferShortPath",
-    "MenuTheme", "MenuBgHex", "MenuTextHex", "MenuAccentHex", "MenuFont", "MenuTitle", "ScreenResolution",
+    "MenuTheme", "MenuBgHex", "MenuPanelHex", "MenuSidebarHex", "MenuTextHex", "MenuAccentHex", "MenuFont", "MenuTitle", "ScreenResolution",
     "MenuWidthOverride", "MenuHeightOverride", "SavedLocations", "DetectionHistory", "CustomFontAssetId",
     "PLWalkSpeed", "PLWalkSpeedValue", "PLInfiniteJump", "PLSpin", "PLCrouchSpeed", "PLFly", "PLSpinSpeed",
     "NDSWalkSpeed", "NDSWalkSpeedValue", "NDSInfiniteJump", "NDSNoclip", "NDSSpin", "NDSSpinSpeed", "NDSLowGravity",
@@ -3411,6 +3413,8 @@ do
     end
     local function applyAppearance()
         local bg=hexColor(State.MenuBgHex) or Color3.fromRGB(8,10,18)
+        local panel=hexColor(State.MenuPanelHex) or Color3.fromRGB(13,16,27)
+        local side=hexColor(State.MenuSidebarHex) or Color3.fromRGB(5,7,13)
         local fg=hexColor(State.MenuTextHex) or Color3.fromRGB(237,239,248)
         local accent=hexColor(State.MenuAccentHex) or Color3.fromRGB(255,41,79)
         if Main then Main.BackgroundColor3=bg end
@@ -3420,8 +3424,11 @@ do
             for _,star in ipairs(_WT.GalaxyField:GetChildren()) do if star:IsA("Frame") and star.Name:match("^Star") then star.Visible=false end end
         end
         if _WT.MainStroke then _WT.MainStroke.Color=accent end
+        if Header then Header.BackgroundColor3=panel end
+        if StatusStrip then StatusStrip.BackgroundColor3=panel end
         if _WT.HeaderLine then _WT.HeaderLine.BackgroundColor3=accent end
-        if _WT.Sidebar then _WT.Sidebar.ScrollBarImageColor3=accent end
+        if _WT.Sidebar then _WT.Sidebar.BackgroundColor3=side; _WT.Sidebar.ScrollBarImageColor3=accent end
+        for tabName,tabButton in pairs(TabButtons) do tabButton.BackgroundColor3=(tabName==State.CurrentTab) and accent or panel end
         if Title then Title.Text=tostring(State.MenuTitle or "WINDTURF"):sub(1,28); Title.TextColor3=accent end
         for _,obj in ipairs(MainGui:GetDescendants()) do
             if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
@@ -3451,12 +3458,14 @@ do
         end)
     end
     button(page,"Red Theme","Restore the original red appearance.",function()
-        State.MenuTheme="Red"; State.MenuBgHex="080A12"; State.MenuTextHex="EDEFF8"; State.MenuAccentHex="FF294F"; applyAppearance(); pcall(savePersistentData)
+        State.MenuTheme="Red"; State.MenuBgHex="080A12"; State.MenuPanelHex="0D101B"; State.MenuSidebarHex="05070D"; State.MenuTextHex="EDEFF8"; State.MenuAccentHex="FF294F"; applyAppearance(); pcall(savePersistentData)
     end)
     button(page,"Blue Theme","Apply a blue accent palette while keeping the same menu layout.",function()
-        State.MenuTheme="Blue"; State.MenuBgHex="080D18"; State.MenuTextHex="EAF3FF"; State.MenuAccentHex="4B9BFF"; applyAppearance(); pcall(savePersistentData)
+        State.MenuTheme="Blue"; State.MenuBgHex="080D18"; State.MenuPanelHex="101B2B"; State.MenuSidebarHex="07111F"; State.MenuTextHex="EAF3FF"; State.MenuAccentHex="4B9BFF"; applyAppearance(); pcall(savePersistentData)
     end)
     makeInput("Menu background HEX","Example: 080A12",State.MenuBgHex,function(v) local _,h=hexColor(v); if not h then notify("Customization","Use exactly 6 hexadecimal characters.",3); return end; State.MenuBgHex=h; State.MenuTheme="Custom"; applyAppearance(); pcall(savePersistentData) end)
+    makeInput("Panel color HEX","Example: 0D101B",State.MenuPanelHex,function(v) local _,h=hexColor(v); if not h then notify("Customization","Use exactly 6 hexadecimal characters.",3); return end; State.MenuPanelHex=h; applyAppearance(); pcall(savePersistentData) end)
+    makeInput("Sidebar color HEX","Example: 05070D",State.MenuSidebarHex,function(v) local _,h=hexColor(v); if not h then notify("Customization","Use exactly 6 hexadecimal characters.",3); return end; State.MenuSidebarHex=h; applyAppearance(); pcall(savePersistentData) end)
     makeInput("Text color HEX","Example: EDEFF8",State.MenuTextHex,function(v) local _,h=hexColor(v); if not h then notify("Customization","Use exactly 6 hexadecimal characters.",3); return end; State.MenuTextHex=h; applyAppearance(); pcall(savePersistentData) end)
     makeInput("Accent color HEX","Example: FF294F",State.MenuAccentHex,function(v) local _,h=hexColor(v); if not h then notify("Customization","Use exactly 6 hexadecimal characters.",3); return end; State.MenuAccentHex=h; applyAppearance(); pcall(savePersistentData) end)
     makeInput("Menu title","Up to 28 characters",State.MenuTitle,function(v) State.MenuTitle=tostring(v):sub(1,28); applyAppearance(); pcall(savePersistentData) end)
