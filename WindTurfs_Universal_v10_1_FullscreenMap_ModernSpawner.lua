@@ -104,11 +104,11 @@ end
 --//==============================================================
 --// CONFIGURATION
 --//==============================================================
-_WT.SOURCE_REVISION = "Universal_Blue_v9_9_TouchMapPanFix"
+_WT.SOURCE_REVISION = "Universal_v10_1_FullscreenMap_ModernSpawner"
 
 local CONFIG = {
     ScriptName = "WindTurf's Universal Script",
-    Version = "v9.9 Touch Map Fix • Original Menu",
+    Version = "v10.1 Fullscreen Map • Modern UI",
 
     -- Landscape Android layout for 1604x720-class screens:
     -- long sides run left-to-right (like =), short sides run top-to-bottom (like | |).
@@ -3177,6 +3177,33 @@ do
     end
    end
   end)
+   local function refreshLiveInventoryImages()
+    pcall(function()
+     local playerGui=LocalPlayer:FindFirstChildOfClass("PlayerGui")
+     if not playerGui then return end
+     for _,imageObject in ipairs(playerGui:GetDescendants()) do
+      if imageObject:IsA("ImageLabel") or imageObject:IsA("ImageButton") then
+       local image=normalizeImage(imageObject.Image)
+       if image then
+        local parts={}
+        local node=imageObject
+        local depth=0
+        while node and node~=playerGui and depth<10 do
+         table.insert(parts,string.lower(node.Name))
+         if node:IsA("TextLabel") or node:IsA("TextButton") or node:IsA("TextBox") then table.insert(parts,string.lower(tostring(node.Text or ""))) end
+         node=node.Parent
+         depth+=1
+        end
+        local pathText=table.concat(parts," "):gsub("[^%w]","")
+        for _,it in ipairs(items) do
+         local key=string.lower(it.Name):gsub("[^%w]","")
+         if key~="" and pathText:find(key,1,true) then assignItemImage(it.Name,image) end
+        end
+       end
+      end
+     end
+    end)
+   end
   local search=Instance.new("TextBox"); search.Size=UDim2.new(1,-5,0,32); search.BackgroundColor3=Color3.fromRGB(12,16,27); search.PlaceholderText="Search Godly, Ancient, or Unique items"; search.Text=""; search.ClearTextOnFocus=false; search.TextColor3=Color3.new(1,1,1); search.Font=Enum.Font.Gotham; search.TextSize=10; search.Parent=page
   local list=Instance.new("ScrollingFrame"); list.Size=UDim2.new(1,-5,0,175); list.BackgroundColor3=Color3.fromRGB(7,10,18); list.BorderSizePixel=0; list.ScrollBarThickness=5; list.AutomaticCanvasSize=Enum.AutomaticSize.Y; list.CanvasSize=UDim2.new(); list.Parent=page
   local grid=Instance.new("UIGridLayout"); grid.CellSize=UDim2.new(.48,0,0,68); grid.CellPadding=UDim2.fromOffset(5,5); grid.Parent=list
@@ -3210,7 +3237,8 @@ do
      local buttonCount=0
      for _,child in ipairs(obj:GetChildren()) do if child:IsA("ImageButton") or child:IsA("TextButton") then buttonCount+=1 end end
      score+=math.min(buttonCount,12)
-     if hasInventoryAncestor and obj.Visible and obj.AbsoluteSize.X>40 and obj.AbsoluteSize.Y>30 and score>0 then table.insert(candidates,{Object=obj,Score=score}) end
+     local hasItemLayout=obj:FindFirstChildOfClass("UIGridLayout")~=nil or buttonCount>0
+     if hasInventoryAncestor and hasItemLayout and obj.Visible and obj.AbsoluteSize.X>40 and obj.AbsoluteSize.Y>30 and score>0 then table.insert(candidates,{Object=obj,Score=score}) end
     end
    end
    table.sort(candidates,function(a,b) return a.Score>b.Score end)
@@ -3288,8 +3316,18 @@ do
    end
    return true,"Visual-only tile added to MM2's open inventory"
   end
-  local function choose(it) selected=it; detail.Visible=true; info.Text=it.Name.."\n"..it.Rarity.." • "..it.Type..(it.Added and ("\nAdded: "..it.Added) or ""); pic.Image=images[it.Name] or ""; pic.Visible=images[it.Name]~=nil; fallback.Visible=images[it.Name]==nil end
-  local function rebuild()
+   local function choose(it)
+    refreshLiveInventoryImages()
+    selected=it
+    detail.Visible=true
+    info.Text=it.Name.."\\n"..it.Rarity.." • "..it.Type..(it.Added and ("\\nAdded: "..it.Added) or "")
+    pic.Image=images[it.Name] or ""
+    pic.ImageTransparency=0
+    pic.Visible=images[it.Name]~=nil
+    fallback.Visible=images[it.Name]==nil
+   end
+local function rebuild()
+    refreshLiveInventoryImages()
    for _,v in ipairs(list:GetChildren()) do if v:IsA("GuiButton") or v.Name=="NoMatch" then v:Destroy() end end
    local q=string.lower(search.Text); local count=0
    for _,it in ipairs(items) do if q=="" or string.find(string.lower(it.Name),q,1,true) or string.find(string.lower(it.Rarity),q,1,true) then count+=1
@@ -3870,7 +3908,7 @@ do
         if p then State.MenuBgHex=p[1]; State.MenuPanelHex=p[2]; State.MenuSidebarHex=p[3]; State.MenuTextHex=p[4]; State.MenuAccentHex=p[5] end
         applyAppearance()
     end)
-    button(page,"Improved Menu UI","Toggle the polished blue menu, blue text, cleaner borders and spacing.",function()
+    button(page,"Improved Menu UI","Toggle the refreshed violet/graphite menu or restore the classic red menu.",function()
         State.ImprovedMenuUI=not State.ImprovedMenuUI
         State.MenuStyle=State.ImprovedMenuUI and "Modern" or "Classic"
         if not State.ImprovedMenuUI then
@@ -3878,7 +3916,7 @@ do
             State.MenuSidebarHex="05070D"; State.MenuTextHex="EDEFF8"; State.MenuAccentHex="FF294F"
         end
         applyAppearance(); pcall(savePersistentData)
-        notify("Improved Menu UI",State.ImprovedMenuUI and "Blue interface enabled." or "Default appearance restored.",3)
+        notify("Improved Menu UI",State.ImprovedMenuUI and "Modern violet interface enabled." or "Classic red interface restored.",3)
     end)
     button(page,"Holiday Background","Toggle a real evergreen foliage photograph behind the menu panels.",function()
         State.HolidayBackgroundEnabled = not State.HolidayBackgroundEnabled
