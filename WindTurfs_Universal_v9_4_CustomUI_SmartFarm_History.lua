@@ -252,6 +252,8 @@ local State = {
     MenuWidthOverride = 0,
     MenuHeightOverride = 0,
     SavedLocations = {},
+    DetectionHistory = {},
+    CustomFontAssetId = 0,
 }
 
 --//==============================================================
@@ -273,7 +275,7 @@ local PERSIST_KEYS = {
     "PathDiagram", "PathDiagramCoins", "PathDiagramDanger", "PathDiagramObstacles", "PathDiagramPlayers",
     "LifetimeCoins", "Sessions", "FarmDangerRadius", "FarmSafeRadius", "FarmCandidateLimit", "FarmPreferShortPath",
     "MenuTheme", "MenuBgHex", "MenuTextHex", "MenuAccentHex", "MenuFont", "MenuTitle", "ScreenResolution",
-    "MenuWidthOverride", "MenuHeightOverride", "SavedLocations",
+    "MenuWidthOverride", "MenuHeightOverride", "SavedLocations", "DetectionHistory", "CustomFontAssetId",
     "PLWalkSpeed", "PLWalkSpeedValue", "PLInfiniteJump", "PLSpin", "PLCrouchSpeed", "PLFly", "PLSpinSpeed",
     "NDSWalkSpeed", "NDSWalkSpeedValue", "NDSInfiniteJump", "NDSNoclip", "NDSSpin", "NDSSpinSpeed", "NDSLowGravity",
 }
@@ -3424,8 +3426,14 @@ do
                     obj.TextColor3=fg
                 end
                 local fontName=tostring(State.MenuFont or "Gotham")
-                local enumFont=Enum.Font[fontName]
-                if enumFont then obj.Font=enumFont end
+                local customId=tonumber(State.CustomFontAssetId) or 0
+                if customId>0 then
+                    local ok,font=pcall(function() return Font.fromId(customId) end)
+                    if ok and font then pcall(function() obj.FontFace=font end) end
+                else
+                    local enumFont=Enum.Font[fontName]
+                    if enumFont then obj.Font=enumFont end
+                end
             elseif obj:IsA("UIStroke") and obj.Parent~= _WT.MainStroke then
                 if obj.Name~="PathMapStroke" then obj.Color=accent end
             end
@@ -3466,10 +3474,9 @@ do
         if not id or id<1 then notify("Custom Font","Enter a valid Roblox font asset ID. A raw TTF file cannot be loaded directly.",4); return end
         local ok,font=pcall(function() return Font.fromId(id) end)
         if not ok or not font then notify("Custom Font","This runtime could not create a FontFace from that asset ID.",4); return end
-        for _,obj in ipairs(MainGui:GetDescendants()) do
-            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then pcall(function() obj.FontFace=font end) end
-        end
-        State.MenuFont="Gotham"; notify("Custom Font","Applied Roblox font asset for this session.",3)
+        State.CustomFontAssetId=id
+        applyAppearance(); pcall(savePersistentData)
+        notify("Custom Font","Applied Roblox font asset.",3)
     end)
     button(page,"Reset Menu Size","Restore the default landscape menu dimensions.",function()
         MENU_WIDTH=IsMobile and CONFIG.MobileWidth or CONFIG.DesktopWidth
@@ -3482,7 +3489,7 @@ end
 
 --//==============================================================
 local DANGER_RADIUS, SAFE_COIN_RADIUS
-local DetectionHistory = _WT.DetectionHistory or {}
+local DetectionHistory = type(State.DetectionHistory)=="table" and State.DetectionHistory or {}
 
 --// SAVED TELEPORT LOCATIONS
  do
@@ -3500,7 +3507,7 @@ local DetectionHistory = _WT.DetectionHistory or {}
             if type(loc)=="table" then
                 local row=Instance.new("Frame"); row.Size=UDim2.new(1,0,0,34); row.BackgroundColor3=Color3.fromRGB(10,13,23); row.BorderSizePixel=0; row.Parent=list
                 local label=Instance.new("TextLabel"); label.Size=UDim2.new(.48,0,1,0); label.Position=UDim2.fromOffset(7,0); label.BackgroundTransparency=1; label.Text=tostring(loc.Name or ("Location "..i)); label.TextColor3=Color3.fromRGB(225,230,242); label.Font=Enum.Font.GothamSemibold; label.TextSize=8; label.TextXAlignment=Enum.TextXAlignment.Left; label.Parent=row
-                local go=Instance.new("TextButton"); go.Size=UDim2.new(.23,-3,0,25); go.Position=UDim2.new(.53,0,.5,-12); go.Text="GO"; go.TextColor3=Color3.new(1,1,1); go.BackgroundColor3=Color3.fromRGB(38,105,175); go.Font=Enum.Font.GothamBold; go.TextSize=8; go.Parent=row
+                local go=Instance.new("TextButton"); go.Size=UDim2.new(.18,-3,0,25); go.Position=UDim2.new(.48,0,.5,-12); go.Text="GO"; go.TextColor3=Color3.new(1,1,1); go.BackgroundColor3=Color3.fromRGB(38,105,175); go.Font=Enum.Font.GothamBold; go.TextSize=8; go.Parent=row
                 go.MouseButton1Click:Connect(function()
                     if not isAlive() or not RootPart or not Humanoid then notify("Saved Location","Character is not ready.",3); return end
                     local pos=Vector3.new(tonumber(loc.X) or 0,tonumber(loc.Y) or 0,tonumber(loc.Z) or 0)
@@ -3511,7 +3518,9 @@ local DetectionHistory = _WT.DetectionHistory or {}
                     pcall(function() Character:PivotTo(CFrame.new(dest)*RootPart.CFrame.Rotation); RootPart.AssemblyLinearVelocity=Vector3.zero; RootPart.AssemblyAngularVelocity=Vector3.zero end)
                     notify("Saved Location","Move attempted. The server may reject client-side movement.",3)
                 end)
-                local del=Instance.new("TextButton"); del.Size=UDim2.new(.19,-3,0,25); del.Position=UDim2.new(.78,0,.5,-12); del.Text="DEL"; del.TextColor3=Color3.new(1,1,1); del.BackgroundColor3=Color3.fromRGB(130,35,48); del.Font=Enum.Font.GothamBold; del.TextSize=8; del.Parent=row
+                local rename=Instance.new("TextButton"); rename.Size=UDim2.new(.16,-3,0,25); rename.Position=UDim2.new(.67,0,.5,-12); rename.Text="EDIT"; rename.TextColor3=Color3.new(1,1,1); rename.BackgroundColor3=Color3.fromRGB(60,82,125); rename.Font=Enum.Font.GothamBold; rename.TextSize=8; rename.Parent=row
+                rename.MouseButton1Click:Connect(function() local newName=tostring(nameBox.Text or ""):gsub("^%s+",""):gsub("%s+$",""); if newName=="" then notify("Saved Location","Enter a new name first.",2); return end; loc.Name=newName:sub(1,32); pcall(savePersistentData); refresh() end)
+                local del=Instance.new("TextButton"); del.Size=UDim2.new(.14,-3,0,25); del.Position=UDim2.new(.84,0,.5,-12); del.Text="DEL"; del.TextColor3=Color3.new(1,1,1); del.BackgroundColor3=Color3.fromRGB(130,35,48); del.Font=Enum.Font.GothamBold; del.TextSize=8; del.Parent=row
                 del.MouseButton1Click:Connect(function() table.remove(State.SavedLocations,i); pcall(savePersistentData); refresh() end)
             end
         end
@@ -4135,7 +4144,7 @@ _WT.CleanupFly = function()
     FlightAscendHeld,FlightDescendHeld = false,false
 end
 
-DetectionHistory = _WT.DetectionHistory or {}
+DetectionHistory = type(State.DetectionHistory)=="table" and State.DetectionHistory or {}
 _WT.DetectionHistory = DetectionHistory
 _WT.RecordDetection = function(player, reason, source, confidence)
     local entry = {
@@ -5484,7 +5493,7 @@ function _WT.findBestPathCoin()
         if path and waypoints and _WT.pathIsSafe(waypoints, dangers) then
             local length = _WT.pathLength(waypoints, currentPosition)
             local threatBonus = math.max(0, SAFE_COIN_RADIUS - candidate.ThreatDistance)
-            local score = length + threatBonus * 3
+            local score = (State.FarmPreferShortPath and length or candidate.Distance) + threatBonus * 3
 
             if score < bestScore then
                 bestScore = score
