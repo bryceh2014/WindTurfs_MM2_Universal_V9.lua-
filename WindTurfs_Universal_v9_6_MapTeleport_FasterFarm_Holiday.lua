@@ -399,6 +399,8 @@ savePersistentData = function()
 end
 
 loadPersistentData()
+-- v9.5 used 3 as the minimum delay; migrate that old default to v9.6's faster 1-step setting.
+if tonumber(State.FarmTeleportDelay) == 3 then State.FarmTeleportDelay = 1 end
 
 State.Sessions = (tonumber(State.Sessions) or 0) + 1
 
