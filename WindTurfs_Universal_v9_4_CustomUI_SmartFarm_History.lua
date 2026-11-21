@@ -677,7 +677,10 @@ _WT.MainStroke.Parent = Main
 -- Subtle red/black galaxy field inside the menu.
 _WT.GalaxyField = Instance.new("Frame")
 _WT.GalaxyField.Name = "GalaxyField"
-_WT.GalaxyField.Size = UDim2.fromScale(1, 1)
+_WT.GalaxyField.Size = UDim2.new(1,-2,1,-2)
+_WT.GalaxyField.Position = UDim2.fromOffset(1,1)
+_WT.GalaxyField.ClipsDescendants = true
+local galaxyCorner=Instance.new("UICorner"); galaxyCorner.CornerRadius=UDim.new(0,14); galaxyCorner.Parent=_WT.GalaxyField
 _WT.GalaxyField.BackgroundColor3 = Color3.fromRGB(4, 5, 11)
 _WT.GalaxyField.BorderSizePixel = 0
 _WT.GalaxyField.ZIndex = 100
@@ -711,6 +714,8 @@ end
 local Header = Instance.new("Frame")
 Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 54)
+Header.ClipsDescendants=true
+local headerCorner=Instance.new("UICorner"); headerCorner.CornerRadius=UDim.new(0,14); headerCorner.Parent=Header
 Header.BackgroundColor3 = Color3.fromRGB(8, 5, 11)
 Header.BackgroundTransparency = 0.03
 Header.BorderSizePixel = 0
@@ -3476,6 +3481,55 @@ do
 end
 
 --//==============================================================
+local DANGER_RADIUS, SAFE_COIN_RADIUS
+local DetectionHistory = _WT.DetectionHistory or {}
+
+--// SAVED TELEPORT LOCATIONS
+ do
+    local page=Pages.Map
+    section(page,"SAVED LOCATIONS")
+    local nameBox=Instance.new("TextBox"); nameBox.Size=UDim2.new(1,-5,0,34); nameBox.BackgroundColor3=Color3.fromRGB(10,13,23)
+    nameBox.BorderSizePixel=0; nameBox.PlaceholderText="Location name"; nameBox.Text=""; nameBox.TextColor3=Color3.fromRGB(235,240,250)
+    nameBox.PlaceholderColor3=Color3.fromRGB(125,135,155); nameBox.Font=Enum.Font.Gotham; nameBox.TextSize=9; nameBox.ClearTextOnFocus=false; nameBox.Parent=page
+    local list=Instance.new("Frame"); list.Name="SavedLocationList"; list.Size=UDim2.new(1,-5,0,10); list.AutomaticSize=Enum.AutomaticSize.Y; list.BackgroundTransparency=1; list.Parent=page
+    local layout=Instance.new("UIListLayout"); layout.Padding=UDim.new(0,4); layout.Parent=list
+    local function refresh()
+        for _,v in ipairs(list:GetChildren()) do if v:IsA("GuiObject") and v~=layout then v:Destroy() end end
+        local locations=type(State.SavedLocations)=="table" and State.SavedLocations or {}
+        for i,loc in ipairs(locations) do
+            if type(loc)=="table" then
+                local row=Instance.new("Frame"); row.Size=UDim2.new(1,0,0,34); row.BackgroundColor3=Color3.fromRGB(10,13,23); row.BorderSizePixel=0; row.Parent=list
+                local label=Instance.new("TextLabel"); label.Size=UDim2.new(.48,0,1,0); label.Position=UDim2.fromOffset(7,0); label.BackgroundTransparency=1; label.Text=tostring(loc.Name or ("Location "..i)); label.TextColor3=Color3.fromRGB(225,230,242); label.Font=Enum.Font.GothamSemibold; label.TextSize=8; label.TextXAlignment=Enum.TextXAlignment.Left; label.Parent=row
+                local go=Instance.new("TextButton"); go.Size=UDim2.new(.23,-3,0,25); go.Position=UDim2.new(.53,0,.5,-12); go.Text="GO"; go.TextColor3=Color3.new(1,1,1); go.BackgroundColor3=Color3.fromRGB(38,105,175); go.Font=Enum.Font.GothamBold; go.TextSize=8; go.Parent=row
+                go.MouseButton1Click:Connect(function()
+                    if not isAlive() or not RootPart or not Humanoid then notify("Saved Location","Character is not ready.",3); return end
+                    local pos=Vector3.new(tonumber(loc.X) or 0,tonumber(loc.Y) or 0,tonumber(loc.Z) or 0)
+                    local params=RaycastParams.new(); params.FilterType=Enum.RaycastFilterType.Exclude; params.FilterDescendantsInstances=Character and {Character} or {}; params.RespectCanCollide=true
+                    local hit=workspace:Raycast(pos+Vector3.new(0,12,0),Vector3.new(0,-500,0),params)
+                    if not hit or (hit.Position.Y>RootPart.Position.Y+2) then notify("Saved Location","No valid floor was found at this saved spot.",3); return end
+                    local dest=Vector3.new(pos.X,hit.Position.Y+Humanoid.HipHeight+RootPart.Size.Y*.5+.1,pos.Z)
+                    pcall(function() Character:PivotTo(CFrame.new(dest)*RootPart.CFrame.Rotation); RootPart.AssemblyLinearVelocity=Vector3.zero; RootPart.AssemblyAngularVelocity=Vector3.zero end)
+                    notify("Saved Location","Move attempted. The server may reject client-side movement.",3)
+                end)
+                local del=Instance.new("TextButton"); del.Size=UDim2.new(.19,-3,0,25); del.Position=UDim2.new(.78,0,.5,-12); del.Text="DEL"; del.TextColor3=Color3.new(1,1,1); del.BackgroundColor3=Color3.fromRGB(130,35,48); del.Font=Enum.Font.GothamBold; del.TextSize=8; del.Parent=row
+                del.MouseButton1Click:Connect(function() table.remove(State.SavedLocations,i); pcall(savePersistentData); refresh() end)
+            end
+        end
+    end
+    button(page,"Save Current Position","Save your current world position under the name above.",function()
+        if not isAlive() or not RootPart then notify("Saved Location","Character is not ready.",3); return end
+        State.SavedLocations=type(State.SavedLocations)=="table" and State.SavedLocations or {}
+        if #State.SavedLocations>=20 then notify("Saved Location","Limit reached: 20 saved positions.",3); return end
+        local name=tostring(nameBox.Text or ""):gsub("^%s+",""):gsub("%s+$","")
+        if name=="" then name="Location "..tostring(#State.SavedLocations+1) end
+        local p=RootPart.Position
+        table.insert(State.SavedLocations,{Name=name:sub(1,32),X=p.X,Y=p.Y,Z=p.Z})
+        pcall(savePersistentData); refresh(); notify("Saved Location","Saved "..name..".",2)
+    end)
+    button(page,"Refresh Saved Locations","Rebuild the saved location list.",refresh)
+    refresh()
+end
+
 --// SIDEBAR BUTTONS
 --//==============================================================
 do
@@ -4081,7 +4135,7 @@ _WT.CleanupFly = function()
     FlightAscendHeld,FlightDescendHeld = false,false
 end
 
-local DetectionHistory = _WT.DetectionHistory or {}
+DetectionHistory = _WT.DetectionHistory or {}
 _WT.DetectionHistory = DetectionHistory
 _WT.RecordDetection = function(player, reason, source, confidence)
     local entry = {
@@ -4094,6 +4148,7 @@ _WT.RecordDetection = function(player, reason, source, confidence)
     }
     table.insert(DetectionHistory, 1, entry)
     while #DetectionHistory > 100 do table.remove(DetectionHistory) end
+    if _WT.RefreshDetectionHistory then pcall(_WT.RefreshDetectionHistory) end
 end
 
 local function flagPlayer(player, reason, source, confidence)
@@ -4402,8 +4457,8 @@ _WT.FARM_VERIFY_STEP = 0.08
 _WT.FARM_TARGET_RETRIES = 2
 _WT.FARM_FAIL_BLACKLIST_SECONDS = 1.75
 _WT.FARM_MAX_BLACKLIST_SECONDS = 5.0
-local DANGER_RADIUS = tonumber(State.FarmDangerRadius) or 65
-local SAFE_COIN_RADIUS = tonumber(State.FarmSafeRadius) or 72
+DANGER_RADIUS = tonumber(State.FarmDangerRadius) or 65
+SAFE_COIN_RADIUS = tonumber(State.FarmSafeRadius) or 72
 local CoinBlacklist = {}
 local CoinFailureCount = {}
 
