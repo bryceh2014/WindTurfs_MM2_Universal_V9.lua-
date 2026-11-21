@@ -3127,14 +3127,24 @@ do
    local wanted=string.lower(tostring(name or ""))
    for _,it in ipairs(items) do if string.lower(it.Name)==wanted and not images[it.Name] then images[it.Name]=image; return end end
   end
-  local function imageFromRecord(record)
-   if type(record)~="table" then return normalizeImage(record) end
-   for key,value in pairs(record) do
-    if type(key)=="string" and imageFields[string.lower(key)] then local image=normalizeImage(value); if image then return image end end
+   local function imageFromRecord(record,depth,seen)
+    if type(record)~="table" then return normalizeImage(record) end
+    depth=depth or 0
+    seen=seen or {}
+    if depth>5 or seen[record] then return nil end
+    seen[record]=true
+    for key,value in pairs(record) do
+     if type(key)=="string" and imageFields[string.lower(key)] then
+      local image=normalizeImage(value)
+      if image then return image end
+     elseif type(value)=="table" then
+      local nested=imageFromRecord(value,depth+1,seen)
+      if nested then return nested end
+     end
+    end
+    return nil
    end
-   return nil
-  end
-  local function scan(t,depth,seen)
+   local function scan(t,depth,seen)
    if type(t)~="table" or depth>9 or seen[t] then return end
    seen[t]=true
    for key,value in pairs(t) do
