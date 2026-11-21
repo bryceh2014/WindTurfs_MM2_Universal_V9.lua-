@@ -3640,9 +3640,12 @@ do
         if State.ImprovedMenuUI then
             State.MenuTheme="Blue"; State.MenuBgHex="071120"; State.MenuPanelHex="0D1F35"
             State.MenuSidebarHex="050E1B"; State.MenuTextHex="AED7FF"; State.MenuAccentHex="3697FF"
+        else
+            State.MenuTheme="Red"; State.MenuBgHex="080A12"; State.MenuPanelHex="0D101B"
+            State.MenuSidebarHex="05070D"; State.MenuTextHex="EDEFF8"; State.MenuAccentHex="FF294F"
         end
         applyAppearance(); pcall(savePersistentData)
-        notify("Improved Menu UI",State.ImprovedMenuUI and "Blue interface enabled." or "Custom appearance restored.",3)
+        notify("Improved Menu UI",State.ImprovedMenuUI and "Blue interface enabled." or "Default appearance restored.",3)
     end)
     button(page,"Holiday Background","Toggle a real evergreen foliage photograph behind the menu panels.",function()
         State.HolidayBackgroundEnabled = not State.HolidayBackgroundEnabled
@@ -3747,7 +3750,7 @@ do
     if not seen then pcall(function() local f,g=ENV.isfile or isfile,ENV.readfile or readfile; if type(f)=="function" and type(g)=="function" and f(p) and g(p)=="seen" then seen=true end end) end
     local function save() seen=true; ENV[k]=true; local m,w=ENV.makefolder or makefolder,ENV.writefile or writefile; if type(m)=="function" then pcall(m,"WindTurf") end; if type(w)=="function" then pcall(w,p,"seen") end end
     local function showNotes()
-        for n,v in pairs(Pages) do v.Visible=n=="Notes" end
+        for _,info in ipairs(TabInfo) do local n=info[1]; if Pages[n] then Pages[n].Visible=n=="Notes" end end
         for n,b in pairs(TabButtons) do local a=n=="Notes"; b.BackgroundColor3=a and Color3.fromRGB(198,13,39) or Color3.fromRGB(9,11,18); local l=b:FindFirstChildOfClass("TextLabel"); if l then l.TextColor3=a and Color3.new(1,1,1) or Color3.fromRGB(205,212,232) end end
         State.CurrentTab="Notes"
     end
@@ -3908,8 +3911,10 @@ for index, info in ipairs(TabInfo) do
             for n,b in pairs(TabButtons) do local a=n=="Spawner"; b.BackgroundColor3=a and Color3.fromRGB(198,13,39) or Color3.fromRGB(9,11,18); local l=b:FindFirstChildOfClass("TextLabel"); if l then l.TextColor3=a and Color3.new(1,1,1) or Color3.fromRGB(205,212,232) end end
             State.CurrentTab="Spawner"; _WT.OpenSpawnerDisclaimer(); return
         end
-        for name, page in pairs(Pages) do
-            page.Visible = name == tabName
+        for _, info in ipairs(TabInfo) do
+            local name=info[1]
+            local page=Pages[name]
+            if page then page.Visible = name == tabName end
         end
         for name, tabButton in pairs(TabButtons) do
             local active = name == tabName
