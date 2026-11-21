@@ -6541,7 +6541,7 @@ do
     PathMapFullscreenOverlay.BackgroundColor3 = Color3.fromRGB(5, 7, 15)
     PathMapFullscreenOverlay.BorderSizePixel = 0
     PathMapFullscreenOverlay.Visible = false
-    PathMapFullscreenOverlay.ZIndex = 1000
+    PathMapFullscreenOverlay.ZIndex = 200
     PathMapFullscreenOverlay.Parent = MainGui
 
     local fullMapTitle = Instance.new("TextLabel")
@@ -6553,7 +6553,7 @@ do
     fullMapTitle.Font = Enum.Font.GothamBlack
     fullMapTitle.TextSize = 14
     fullMapTitle.TextXAlignment = Enum.TextXAlignment.Left
-    fullMapTitle.ZIndex = 1200
+    fullMapTitle.ZIndex = 220
     fullMapTitle.Parent = PathMapFullscreenOverlay
 
     local closeFullMap = Instance.new("TextButton")
@@ -6566,7 +6566,7 @@ do
     closeFullMap.TextColor3 = Color3.new(1, 1, 1)
     closeFullMap.Font = Enum.Font.GothamBlack
     closeFullMap.TextSize = 18
-    closeFullMap.ZIndex = 1300
+    closeFullMap.ZIndex = 230
     closeFullMap.Parent = PathMapFullscreenOverlay
     local closeCorner = Instance.new("UICorner")
     closeCorner.CornerRadius = UDim.new(0, 8)
@@ -6582,7 +6582,7 @@ do
     fullMapRecenter.TextColor3 = Color3.new(1, 1, 1)
     fullMapRecenter.Font = Enum.Font.GothamBold
     fullMapRecenter.TextSize = 10
-    fullMapRecenter.ZIndex = 1300
+    fullMapRecenter.ZIndex = 230
     fullMapRecenter.Parent = PathMapFullscreenOverlay
     local recenterCorner = Instance.new("UICorner")
     recenterCorner.CornerRadius = UDim.new(0, 8)
@@ -6597,7 +6597,7 @@ do
     fullMapHint.Font = Enum.Font.GothamSemibold
     fullMapHint.TextSize = 9
     fullMapHint.TextXAlignment = Enum.TextXAlignment.Left
-    fullMapHint.ZIndex = 1300
+    fullMapHint.ZIndex = 230
     fullMapHint.Parent = PathMapFullscreenOverlay
 
     local function lockCurrentMapCenter()
@@ -6622,7 +6622,7 @@ do
         PathMapCanvas.Parent = PathMapFullscreenOverlay
         PathMapCanvas.Position = UDim2.new(0, 12, 0, 52)
         PathMapCanvas.Size = UDim2.new(1, -24, 1, -108)
-        PathMapCanvas.ZIndex = 1050
+        PathMapCanvas.ZIndex = 210
         PathMapCanvas.Visible = true
         PathMapInputSurface.Size = UDim2.fromScale(1, 1)
         PathMapInputSurface.Position = UDim2.fromOffset(0, 0)
