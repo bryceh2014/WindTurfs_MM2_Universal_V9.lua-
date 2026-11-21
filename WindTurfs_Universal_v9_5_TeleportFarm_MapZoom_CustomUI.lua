@@ -242,7 +242,7 @@ local State = {
     FarmSafeRadius = 72,
     FarmCandidateLimit = 8,
     FarmPreferShortPath = true,
-    FarmTeleportDelay = 0.10,
+    FarmTeleportDelay = 3,
     FarmTeleportStepLimit = 45,
     MenuOpacity = 94,
     MenuScale = 100,
@@ -3340,7 +3340,7 @@ do
     slider(page,"Threat Avoidance Radius","Pause farming when a detected threat is within this distance.","FarmDangerRadius",35,140,5,function(v) DANGER_RADIUS=v end)
     slider(page,"Safe Route Clearance","Reject routes passing too close to threats.","FarmSafeRadius",40,160,5,function(v) SAFE_COIN_RADIUS=v end)
     slider(page,"Candidate Routes","Maximum coin candidates considered per selection.","FarmCandidateLimit",2,20,1,function(v) _WT.FARM_CANDIDATE_LIMIT=v end)
-    slider(page,"Teleport Step Delay","Pause between local waypoint teleports (lower is faster).","FarmTeleportDelay",3,60,1,function(v) State.FarmTeleportDelay=v/30 end)
+    slider(page,"Teleport Step Delay","Pause between local waypoint teleports (lower is faster).","FarmTeleportDelay",3,60,1,function(v) State.FarmTeleportDelay=v end)
     slider(page,"Maximum Teleport Step","Recalculate if path waypoints are unusually far apart.","FarmTeleportStepLimit",5,120,5,function(v) State.FarmTeleportStepLimit=v end)
     toggle(page,"Prefer Shortest Safe Route","Choose the shortest safe path instead of relying on the default coin scoring.","FarmPreferShortPath")
     button(page,"Pause Autofarm","Stop movement immediately without clearing saved settings.",function()
@@ -3350,7 +3350,7 @@ do
         notify("Autofarm","Paused.",2)
     end)
     button(page,"Reset Farm Tuning","Restore conservative default path and threat settings.",function()
-        State.FarmDangerRadius=65; State.FarmSafeRadius=72; State.FarmCandidateLimit=8; State.FarmPreferShortPath=true; State.FarmTeleportDelay=0.10; State.FarmTeleportStepLimit=45
+        State.FarmDangerRadius=65; State.FarmSafeRadius=72; State.FarmCandidateLimit=8; State.FarmPreferShortPath=true; State.FarmTeleportDelay=3; State.FarmTeleportStepLimit=45
         DANGER_RADIUS=65; SAFE_COIN_RADIUS=72; _WT.FARM_CANDIDATE_LIMIT=8
         pcall(savePersistentData)
         notify("Autofarm","Farm tuning reset.",2)
@@ -5649,7 +5649,7 @@ function _WT.followFarmPath(path, target, repathCount)
     local waypoints = path:GetWaypoints()
     if #waypoints == 0 then return false end
     local stepLimit = math.clamp(tonumber(State.FarmTeleportStepLimit) or 45, 5, 120)
-    local delaySeconds = math.clamp(tonumber(State.FarmTeleportDelay) or 0.10, 0.03, 0.6)
+    local delaySeconds = math.clamp(tonumber(State.FarmTeleportDelay) or 3, 3, 60) / 30
     local rotation = RootPart.CFrame.Rotation
     local lastPosition = RootPart.Position
 
