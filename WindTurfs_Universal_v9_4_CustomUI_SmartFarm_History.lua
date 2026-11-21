@@ -250,6 +250,7 @@ local State = {
     MenuAccentHex = "FF294F",
     MenuFont = "Gotham",
     MenuTitle = "WINDTURF",
+    MenuSubtitle = "U N I V E R S A L",
     ScreenResolution = "1604x720",
     MenuWidthOverride = 0,
     MenuHeightOverride = 0,
@@ -276,7 +277,7 @@ local PERSIST_KEYS = {
     "CrosshairColor", "CrosshairDesign",
     "PathDiagram", "PathDiagramCoins", "PathDiagramDanger", "PathDiagramObstacles", "PathDiagramPlayers",
     "LifetimeCoins", "Sessions", "FarmDangerRadius", "FarmSafeRadius", "FarmCandidateLimit", "FarmPreferShortPath",
-    "MenuTheme", "MenuBgHex", "MenuPanelHex", "MenuSidebarHex", "MenuTextHex", "MenuAccentHex", "MenuFont", "MenuTitle", "ScreenResolution",
+    "MenuTheme", "MenuBgHex", "MenuPanelHex", "MenuSidebarHex", "MenuTextHex", "MenuAccentHex", "MenuFont", "MenuTitle", "MenuSubtitle", "ScreenResolution",
     "MenuWidthOverride", "MenuHeightOverride", "SavedLocations", "DetectionHistory", "CustomFontAssetId",
     "PLWalkSpeed", "PLWalkSpeedValue", "PLInfiniteJump", "PLSpin", "PLCrouchSpeed", "PLFly", "PLSpinSpeed",
     "NDSWalkSpeed", "NDSWalkSpeedValue", "NDSInfiniteJump", "NDSNoclip", "NDSSpin", "NDSSpinSpeed", "NDSLowGravity",
@@ -3448,7 +3449,7 @@ do
                 if obj.Name~="PathMapStroke" then obj.Color=accent end
             end
         end
-        if _WT.UniversalLabel then _WT.UniversalLabel.Text="U N I V E R S A L" end
+        if _WT.UniversalLabel then _WT.UniversalLabel.Text=tostring(State.MenuSubtitle or "U N I V E R S A L"):sub(1,36) end
     end
     local function addChoice(title,choices,apply)
         local index=1
@@ -3469,6 +3470,7 @@ do
     makeInput("Text color HEX","Example: EDEFF8",State.MenuTextHex,function(v) local _,h=hexColor(v); if not h then notify("Customization","Use exactly 6 hexadecimal characters.",3); return end; State.MenuTextHex=h; applyAppearance(); pcall(savePersistentData) end)
     makeInput("Accent color HEX","Example: FF294F",State.MenuAccentHex,function(v) local _,h=hexColor(v); if not h then notify("Customization","Use exactly 6 hexadecimal characters.",3); return end; State.MenuAccentHex=h; applyAppearance(); pcall(savePersistentData) end)
     makeInput("Menu title","Up to 28 characters",State.MenuTitle,function(v) State.MenuTitle=tostring(v):sub(1,28); applyAppearance(); pcall(savePersistentData) end)
+    makeInput("Universal subtitle","Up to 36 characters",State.MenuSubtitle,function(v) State.MenuSubtitle=tostring(v):sub(1,36); applyAppearance(); pcall(savePersistentData) end)
     makeInput("Screen resolution","Width x height",State.ScreenResolution,function(v)
         local w,h=tostring(v):match("^(%d+)%s*[xX]%s*(%d+)$"); w,h=tonumber(w),tonumber(h)
         if not w or not h or w<320 or h<240 or w>7680 or h>4320 then notify("Screen Size","Enter a valid size, e.g. 1604x720.",3); return end
