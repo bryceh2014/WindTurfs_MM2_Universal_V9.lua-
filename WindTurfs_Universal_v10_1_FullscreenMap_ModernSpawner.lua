@@ -3237,6 +3237,11 @@ do
    local imageCount=0
    for _,it in ipairs(items) do if images[it.Name] then imageCount+=1 end end
    intro.Text="Visual-only preview • "..tostring(imageCount).."/"..tostring(#items).." item icons found"
+   local function updateIconStatus()
+    local count=0
+    for _,item in ipairs(items) do if images[item.Name] then count+=1 end end
+    intro.Text="Visual-only preview • "..tostring(count).."/"..tostring(#items).." item icons found"
+   end
      local search=Instance.new("TextBox"); search.Size=UDim2.new(1,-5,0,32); search.BackgroundColor3=Color3.fromRGB(12,16,27); search.PlaceholderText="Search Godly, Ancient, or Unique items"; search.Text=""; search.ClearTextOnFocus=false; search.TextColor3=Color3.new(1,1,1); search.Font=Enum.Font.Gotham; search.TextSize=10; search.Parent=page
   local list=Instance.new("ScrollingFrame"); list.Size=UDim2.new(1,-5,0,175); list.BackgroundColor3=Color3.fromRGB(7,10,18); list.BorderSizePixel=0; list.ScrollBarThickness=5; list.AutomaticCanvasSize=Enum.AutomaticSize.Y; list.CanvasSize=UDim2.new(); list.Parent=page
   local grid=Instance.new("UIGridLayout"); grid.CellSize=UDim2.new(.48,0,0,68); grid.CellPadding=UDim2.fromOffset(5,5); grid.Parent=list
@@ -3352,6 +3357,7 @@ do
    local function choose(it)
     refreshLiveInventoryImages()
     scanItemCardImages()
+    updateIconStatus()
     selected=it
     detail.Visible=true
     info.Text=it.Name.."\n"..it.Rarity.." • "..it.Type..(it.Added and ("\nAdded: "..it.Added) or "")
@@ -3363,6 +3369,7 @@ do
 local function rebuild()
     refreshLiveInventoryImages()
     scanItemCardImages()
+    updateIconStatus()
    for _,v in ipairs(list:GetChildren()) do if v:IsA("GuiButton") or v.Name=="NoMatch" then v:Destroy() end end
    local q=string.lower(search.Text); local count=0
    for _,it in ipairs(items) do if q=="" or string.find(string.lower(it.Name),q,1,true) or string.find(string.lower(it.Rarity),q,1,true) then count+=1
@@ -3376,25 +3383,33 @@ local function rebuild()
    list.CanvasPosition=Vector2.zero
    if count==0 then local e=Instance.new("TextLabel"); e.Name="NoMatch"; e.Size=UDim2.new(1,-8,0,30); e.BackgroundTransparency=1; e.Text="No matching items"; e.TextColor3=Color3.new(1,1,1); e.Parent=list end
   end
-  add.MouseButton1Click:Connect(function()
-   if not selected then return end
-   if added[selected.Name] then return end
+   add.MouseButton1Click:Connect(function()
+    if not selected then return end
+    local alreadyPreviewed=added[selected.Name]==true
     local callOk,addedToMM2,detailMessage=pcall(addToMM2InventoryPreview,selected)
     local ok=callOk and addedToMM2==true
     if not callOk then detailMessage="MM2 inventory preview error: "..tostring(addedToMM2) end
-added[selected.Name]=true
-   local row=Instance.new("TextLabel")
-   row.Name="PreviewItem_"..tostring(selected.Name):gsub("%W","_")
-   row.Size=UDim2.new(1,-8,0,31)
-   row.BackgroundColor3=Color3.fromRGB(16,20,31)
-   row.BorderSizePixel=0
-   row.LayoutOrder=#inv:GetChildren()+1
-   row.Text="  "..selected.Name.."  •  "..selected.Rarity.."  •  "..selected.Type.."  •  VISUAL ONLY"
-   row.TextColor3=Color3.new(1,1,1)
-   row.Font=Enum.Font.GothamSemibold
-   row.TextSize=8
-   row.TextXAlignment=Enum.TextXAlignment.Left
-   row.Parent=inv
+    if alreadyPreviewed then
+     if ok then
+      notify("Spawner","Visual item also added to the open MM2 inventory. Real inventory unchanged.",4)
+     else
+      notify("Spawner",tostring(detailMessage or "Open the MM2 inventory panel and try again."),4)
+     end
+     return
+    end
+    added[selected.Name]=true
+    local row=Instance.new("TextLabel")
+    row.Name="PreviewItem_"..tostring(selected.Name):gsub("%W","_")
+    row.Size=UDim2.new(1,-8,0,31)
+    row.BackgroundColor3=Color3.fromRGB(16,20,31)
+    row.BorderSizePixel=0
+    row.LayoutOrder=#inv:GetChildren()+1
+    row.Text="  "..selected.Name.."  •  "..selected.Rarity.."  •  "..selected.Type.."  •  VISUAL ONLY"
+    row.TextColor3=Color3.new(1,1,1)
+    row.Font=Enum.Font.GothamSemibold
+    row.TextSize=8
+    row.TextXAlignment=Enum.TextXAlignment.Left
+    row.Parent=inv
     if images[selected.Name] then
      row.Text="     "..selected.Name.."  •  "..selected.Rarity.."  •  "..selected.Type.."  •  VISUAL ONLY"
      local rowIcon=Instance.new("ImageLabel")
@@ -3407,20 +3422,20 @@ added[selected.Name]=true
      rowIcon.ScaleType=Enum.ScaleType.Fit
      rowIcon.Parent=row
     end
-   local rowCorner=Instance.new("UICorner")
-   rowCorner.CornerRadius=UDim.new(0,5)
-   rowCorner.Parent=row
-   local n=0
-   for _ in pairs(added) do n+=1 end
-   invTitle.Text="VISUAL INVENTORY PREVIEW • "..n.." ITEMS"
-   task.defer(function()
-    if inv and inv.Parent then
-     inv.CanvasPosition=Vector2.new(0,math.max(0,inv.AbsoluteCanvasSize.Y-inv.AbsoluteSize.Y))
-    end
+    local rowCorner=Instance.new("UICorner")
+    rowCorner.CornerRadius=UDim.new(0,5)
+    rowCorner.Parent=row
+    local n=0
+    for _ in pairs(added) do n+=1 end
+    invTitle.Text="VISUAL INVENTORY PREVIEW • "..n.." ITEMS"
+    task.defer(function()
+     if inv and inv.Parent then
+      inv.CanvasPosition=Vector2.new(0,math.max(0,inv.AbsoluteCanvasSize.Y-inv.AbsoluteSize.Y))
+     end
+    end)
+    notify("Spawner",ok and (detailMessage..". Real inventory unchanged.") or ("Added to WindTurf visual preview. "..tostring(detailMessage or "MM2 inventory panel was unavailable")..". Real inventory unchanged."),4)
    end)
-   notify("Spawner",ok and (detailMessage..". Real inventory unchanged.") or ("Added to WindTurf visual preview. "..tostring(detailMessage or "MM2 inventory panel was unavailable")..". Real inventory unchanged."),4)
-  end)
-  search:GetPropertyChangedSignal("Text"):Connect(rebuild); rebuild()
+   search:GetPropertyChangedSignal("Text"):Connect(rebuild); rebuild()
  end
 end
 
