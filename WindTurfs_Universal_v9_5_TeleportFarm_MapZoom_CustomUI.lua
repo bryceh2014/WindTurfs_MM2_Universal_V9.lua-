@@ -5642,7 +5642,9 @@ function _WT.verifyCoinCollected(object, beforeObserved, originalParent, origina
     return false
 end
 
-function _WT.followFarmPath(path, target)
+function _WT.followFarmPath(path, target, repathCount)
+    repathCount = tonumber(repathCount) or 0
+    if repathCount > 2 then return false end
     if not path or not target or not Humanoid or not RootPart or not Character then return false end
     local waypoints = path:GetWaypoints()
     if #waypoints == 0 then return false end
@@ -5670,7 +5672,7 @@ function _WT.followFarmPath(path, target)
             if not newPath or not newWaypoints or not _WT.pathIsSafe(newWaypoints, dangers) then return false end
             -- Re-enter using the newly calculated path; cap retries through the path's shorter first segment.
             path, waypoints = newPath, newWaypoints
-            return _WT.followFarmPath(path, target)
+            return _WT.followFarmPath(path, target, repathCount + 1)
         end
         if waypoint.Action == Enum.PathWaypointAction.Jump then destination = destination + Vector3.new(0, 2.5, 0) end
         if FarmDebugPhase then FarmDebugPhase.Text = "Status: TELEPORT STEP " .. tostring(index) .. "/" .. tostring(#waypoints) end
