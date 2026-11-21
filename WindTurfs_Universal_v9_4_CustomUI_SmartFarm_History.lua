@@ -3305,6 +3305,9 @@ end
 
 
 --//==============================================================
+local DANGER_RADIUS, SAFE_COIN_RADIUS
+local DetectionHistory = type(State.DetectionHistory)=="table" and State.DetectionHistory or {}
+
 --// v9.4 ADDITIONS: SMART FARM / DETECTION HISTORY / CUSTOMIZATION
 --//==============================================================
 do
@@ -3488,9 +3491,6 @@ do
 end
 
 --//==============================================================
-local DANGER_RADIUS, SAFE_COIN_RADIUS
-local DetectionHistory = type(State.DetectionHistory)=="table" and State.DetectionHistory or {}
-
 --// SAVED TELEPORT LOCATIONS
  do
     local page=Pages.Map
