@@ -3206,6 +3206,14 @@ do
    label.TextSize=8
    label.TextWrapped=true
    label.Parent=tile
+   if host:IsA("ScrollingFrame") then
+    local contentLayout=host:FindFirstChildOfClass("UIGridLayout")
+        or host:FindFirstChildOfClass("UIListLayout")
+    if contentLayout then
+     host.CanvasSize=UDim2.new(0,math.max(host.AbsoluteSize.X,contentLayout.AbsoluteContentSize.X+8),0,
+        math.max(host.AbsoluteSize.Y,contentLayout.AbsoluteContentSize.Y+8))
+    end
+   end
    return true,"Visual-only tile added to MM2's open inventory"
   end
   local function choose(it) selected=it; detail.Visible=true; info.Text=it.Name.."\n"..it.Rarity.." • "..it.Type..(it.Added and ("\nAdded: "..it.Added) or ""); pic.Image=images[it.Name] or ""; pic.Visible=images[it.Name]~=nil; fallback.Visible=images[it.Name]==nil end
