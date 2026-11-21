@@ -3487,6 +3487,7 @@ do
         Main.Size=UDim2.fromOffset(MENU_WIDTH,MENU_HEIGHT); Main.Position=UDim2.new(.5,-MENU_WIDTH/2,.5,-MENU_HEIGHT/2)
         State.ScreenResolution="1604x720"; pcall(savePersistentData)
     end)
+    _WT.ApplyMenuAppearance=applyAppearance
     applyAppearance()
 end
 
@@ -3634,6 +3635,7 @@ for index, info in ipairs(TabInfo) do
     end)
 end
 
+if _WT.ApplyMenuAppearance then pcall(_WT.ApplyMenuAppearance) end
 Pages.Combat.Visible = true
 TabButtons.Combat.BackgroundColor3 = Color3.fromRGB(198, 13, 39)
 
