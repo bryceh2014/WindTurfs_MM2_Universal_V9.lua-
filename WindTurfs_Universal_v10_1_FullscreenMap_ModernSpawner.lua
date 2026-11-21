@@ -104,11 +104,11 @@ end
 --//==============================================================
 --// CONFIGURATION
 --//==============================================================
-_WT.SOURCE_REVISION = "Universal_v10_1_FullscreenMap_ModernSpawner"
+_WT.SOURCE_REVISION = "Universal_v10_2_SelfLaunch_FullscreenMap"
 
 local CONFIG = {
     ScriptName = "WindTurf's Universal Script",
-    Version = "v10.1 Fullscreen Map • Modern UI",
+    Version = "v10.2 Self Launch • Fullscreen Map",
 
     -- Landscape Android layout for 1604x720-class screens:
     -- long sides run left-to-right (like =), short sides run top-to-bottom (like | |).
@@ -161,6 +161,8 @@ local MENU_HEIGHT = IsMobile and CONFIG.MobileHeight or CONFIG.DesktopHeight
 local State = {
     MenuOpen = true,
     CurrentTab = "Home",
+    LaunchNormalStrength = 65,
+    LaunchMiniStrength = 130,
 
     -- Prison Life safe movement / trolling
     PLWalkSpeed = false,
@@ -959,7 +961,7 @@ _WT.SidebarPadding.Parent = Sidebar
 _WT.SidebarBrand = Instance.new("TextLabel")
 _WT.SidebarBrand.Size = UDim2.new(1, -8, 0, 17)
 _WT.SidebarBrand.BackgroundTransparency = 1
-_WT.SidebarBrand.Text = "W  /  v9.9"
+_WT.SidebarBrand.Text = "W  /  v10.2"
 _WT.SidebarBrand.TextColor3 = Color3.fromRGB(255, 55, 78)
 _WT.SidebarBrand.Font = Enum.Font.GothamBlack
 _WT.SidebarBrand.TextSize = 8
@@ -972,6 +974,7 @@ local TabButtons = {}
 
 local TabInfo = {
     {"Combat", "⌂", "HOME"},
+    {"Launch", "➤", "FLING"},
     {"Coins", "◉", "COIN ESP"},
     {"MiniGames", "♙", "MINI GAMES"},
     {"Hunter", "●", "PLAYER"},
@@ -1436,6 +1439,213 @@ end
 
 --//==============================================================
 --//==============================================================
+--//==============================================================
+--// SELF-LAUNCH / FLING PAGE
+--//==============================================================
+do
+    local page = Pages.Launch
+    section(page, "SELF-LAUNCH")
+    
+    local note = Instance.new("TextLabel")
+    note.Size = UDim2.new(1, -5, 0, 43)
+    note.BackgroundColor3 = Color3.fromRGB(8, 13, 27)
+    note.BorderSizePixel = 0
+    note.Text = "Select a player name for reference, then aim your camera and launch YOUR character. This does not teleport to, track, or fling the selected player."
+    note.TextColor3 = Color3.fromRGB(165, 180, 210)
+    note.Font = Enum.Font.Gotham
+    note.TextSize = 7
+    note.TextWrapped = true
+    note.Parent = page
+    local noteCorner = Instance.new("UICorner")
+    noteCorner.CornerRadius = UDim.new(0, 8)
+    noteCorner.Parent = note
+
+    local targetHolder = Instance.new("Frame")
+    targetHolder.Name = "LaunchTargetInput"
+    targetHolder.Size = UDim2.new(1, -5, 0, 39)
+    targetHolder.BackgroundColor3 = Color3.fromRGB(8, 10, 17)
+    targetHolder.BorderSizePixel = 0
+    targetHolder.Parent = page
+    local targetCorner = Instance.new("UICorner")
+    targetCorner.CornerRadius = UDim.new(0, 8)
+    targetCorner.Parent = targetHolder
+    local targetStroke = Instance.new("UIStroke")
+    targetStroke.Color = Color3.fromRGB(49, 22, 34)
+    targetStroke.Transparency = 0.15
+    targetStroke.Parent = targetHolder
+
+    local targetLabel = Instance.new("TextLabel")
+    targetLabel.Size = UDim2.fromOffset(53, 39)
+    targetLabel.Position = UDim2.fromOffset(8, 0)
+    targetLabel.BackgroundTransparency = 1
+    targetLabel.Text = "TARGET"
+    targetLabel.TextColor3 = Color3.fromRGB(255, 65, 90)
+    targetLabel.Font = Enum.Font.GothamBlack
+    targetLabel.TextSize = 8
+    targetLabel.TextXAlignment = Enum.TextXAlignment.Left
+    targetLabel.Parent = targetHolder
+
+    local targetInput = Instance.new("TextBox")
+    targetInput.Name = "TargetUsername"
+    targetInput.Size = UDim2.new(1, -76, 0, 27)
+    targetInput.Position = UDim2.fromOffset(66, 6)
+    targetInput.BackgroundColor3 = Color3.fromRGB(18, 22, 35)
+    targetInput.BorderSizePixel = 0
+    targetInput.ClearTextOnFocus = false
+    targetInput.PlaceholderText = "Enter username or part of name"
+    targetInput.Text = ""
+    targetInput.TextColor3 = Color3.fromRGB(235, 238, 248)
+    targetInput.PlaceholderColor3 = Color3.fromRGB(115, 125, 148)
+    targetInput.Font = Enum.Font.Gotham
+    targetInput.TextSize = 8
+    targetInput.TextXAlignment = Enum.TextXAlignment.Left
+    targetInput.Parent = targetHolder
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 6)
+    inputCorner.Parent = targetInput
+
+    local targetStatus = Instance.new("TextLabel")
+    targetStatus.Name = "TargetMatchStatus"
+    targetStatus.Size = UDim2.new(1, -5, 0, 20)
+    targetStatus.BackgroundTransparency = 1
+    targetStatus.Text = "Target lookup only • launch direction is your camera aim"
+    targetStatus.TextColor3 = Color3.fromRGB(130, 145, 175)
+    targetStatus.Font = Enum.Font.Gotham
+    targetStatus.TextSize = 7
+    targetStatus.TextXAlignment = Enum.TextXAlignment.Left
+    targetStatus.Parent = page
+
+    local selectedTarget = nil
+    local function resolveLaunchTarget(commitName)
+        local query = string.lower(tostring(targetInput.Text or ""):match("^%s*(.-)%s*$") or "")
+        selectedTarget = nil
+        if query == "" then
+            targetStatus.Text = "Enter a username or partial name"
+            targetStatus.TextColor3 = Color3.fromRGB(130, 145, 175)
+            return
+        end
+
+        local exactMatch = nil
+        local prefixMatches = {}
+        local partialMatches = {}
+        for _, player in ipairs(Players:GetPlayers()) do
+            local username = string.lower(player.Name)
+            local displayName = string.lower(player.DisplayName or "")
+            if username == query then
+                exactMatch = player
+                break
+            elseif username:sub(1, #query) == query or displayName:sub(1, #query) == query then
+                table.insert(prefixMatches, player)
+            elseif username:find(query, 1, true) or displayName:find(query, 1, true) then
+                table.insert(partialMatches, player)
+            end
+        end
+
+        local matches = #prefixMatches > 0 and prefixMatches or partialMatches
+        if exactMatch then
+            selectedTarget = exactMatch
+        elseif #matches == 1 then
+            selectedTarget = matches[1]
+        elseif #matches > 1 then
+            targetStatus.Text = "Multiple matches • type more of the username"
+            targetStatus.TextColor3 = Color3.fromRGB(255, 190, 90)
+            return
+        else
+            targetStatus.Text = "No matching player in this server"
+            targetStatus.TextColor3 = Color3.fromRGB(255, 115, 125)
+            return
+        end
+
+        if commitName and selectedTarget then
+            targetInput.Text = selectedTarget.Name
+        end
+        targetStatus.Text = "MATCH • " .. selectedTarget.Name .. " (lookup only)"
+        targetStatus.TextColor3 = Color3.fromRGB(100, 220, 165)
+    end
+
+    targetInput:GetPropertyChangedSignal("Text"):Connect(function()
+        resolveLaunchTarget(false)
+    end)
+    targetInput.FocusLost:Connect(function()
+        resolveLaunchTarget(true)
+    end)
+    connect("LaunchTargetPlayerAdded", Players.PlayerAdded, function()
+        resolveLaunchTarget(false)
+    end)
+    connect("LaunchTargetPlayerRemoving", Players.PlayerRemoving, function(player)
+        if selectedTarget == player then
+            selectedTarget = nil
+            targetStatus.Text = "Selected player left the server"
+            targetStatus.TextColor3 = Color3.fromRGB(255, 190, 90)
+        else
+            resolveLaunchTarget(false)
+        end
+    end)
+
+    slider(page, "Normal Avatar Strength", "Launch speed for a standard-sized avatar.", "LaunchNormalStrength", 40, 100, 5)
+    slider(page, "Mini Avatar Strength", "Separate launch speed for a small avatar.", "LaunchMiniStrength", 80, 150, 5)
+
+    button(page, "Fling", "Launch your own character in the direction your camera is facing.", function()
+        if not isAlive() then
+            notify("Fling", "Your character is not ready.", 3)
+            return
+        end
+        if RootPart.Anchored then
+            notify("Fling", "Your character is anchored; launch cancelled.", 3)
+            return
+        end
+
+        local camera = workspace.CurrentCamera
+        local direction = camera and camera.CFrame.LookVector or RootPart.CFrame.LookVector
+        if direction.Magnitude < 0.001 then
+            notify("Fling", "Could not read the camera direction.", 3)
+            return
+        end
+        direction = direction.Unit
+
+        local miniAvatar = false
+        local sizeOk, extents = pcall(function()
+            return Character:GetExtentsSize()
+        end)
+        if sizeOk and extents and extents.Y <= 3.5 then
+            miniAvatar = true
+        end
+
+        local strength = miniAvatar
+            and math.clamp(tonumber(State.LaunchMiniStrength) or 130, 80, 150)
+            or math.clamp(tonumber(State.LaunchNormalStrength) or 65, 40, 100)
+
+        local currentVelocity = RootPart.AssemblyLinearVelocity
+        local launchVelocity = direction * strength + Vector3.new(0, 8, 0)
+        local combinedVelocity = currentVelocity * 0.2 + launchVelocity
+        if combinedVelocity.Magnitude > 150 then
+            combinedVelocity = combinedVelocity.Unit * 150
+        end
+
+        RootPart.AssemblyLinearVelocity = combinedVelocity
+        pcall(function()
+            RootPart.AssemblyAngularVelocity = Vector3.new(0, 6.5, 0)
+            Humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+        end)
+
+        local launchRoot = RootPart
+        task.delay(0.35, function()
+            if launchRoot and launchRoot.Parent and RootPart == launchRoot then
+                pcall(function()
+                    local angular = launchRoot.AssemblyAngularVelocity
+                    if math.abs(angular.Y - 6.5) < 3 and angular.Magnitude < 12 then
+                        launchRoot.AssemblyAngularVelocity = Vector3.zero
+                    end
+                end)
+            end
+        end)
+
+        local modeName = miniAvatar and "mini" or "normal"
+        local targetText = selectedTarget and (" • selected: " .. selectedTarget.Name) or ""
+        notify("Fling", modeName .. " self-launch fired" .. targetText, 3)
+    end)
+end
+
 --// MM2 COIN ESP PAGE (VISUAL ONLY)
 --//==============================================================
 do
