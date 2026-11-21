@@ -3111,8 +3111,72 @@ do
   local raw={{"Seer","Godly","Knife"},{"Red Seer","Godly","Knife"},{"Blue Seer","Godly","Knife"},{"Purple Seer","Godly","Knife"},{"Orange Seer","Godly","Knife"},{"Yellow Seer","Godly","Knife"},{"Chroma Seer","Chroma Godly","Knife"},{"Gemstone","Godly","Knife"},{"Heartblade","Godly","Knife"},{"Luger","Godly","Gun"},{"Darkbringer","Godly","Gun"},{"Lightbringer","Godly","Gun"},{"Laser","Godly","Gun"},{"Shark","Godly","Gun"},{"Deathshard","Godly","Knife"},{"Fang","Godly","Knife"},{"Saw","Godly","Knife"},{"Slasher","Godly","Knife"},{"Tides","Godly","Knife"},{"Heat","Godly","Knife"},{"Nightblade","Godly","Knife"},{"Pixel","Godly","Knife"},{"Clockwork","Godly","Knife"},{"Virtual","Godly","Knife"},{"Blaster","Godly","Gun"},{"Amerilaser","Godly","Gun"},{"Old Glory","Godly","Knife"},{"Eternal","Godly","Knife"},{"Eternal II","Godly","Knife"},{"Eternal III","Godly","Knife"},{"Eternal IV","Godly","Knife"},{"Candy","Godly","Knife"},{"Sugar","Godly","Gun"},{"Chill","Godly","Knife"},{"Iceblaster","Godly","Gun"},{"Elderwood Blade","Godly","Knife"},{"Elderwood Revolver","Godly","Gun"},{"Candleflame","Godly","Knife"},{"Alienbeam","Godly","Knife","2025 Halloween"},{"Raygun","Godly","Gun","2025 Halloween"},{"Xenoknife","Godly","Knife","2025 Halloween"},{"Beachy","Godly","Knife","2026 Summer"},{"Sands","Godly","Gun","2026 Summer"},{"Icecream","Godly","Knife","2026 Summer"},{"Mortal","Godly","Knife","2026 Halloween"},{"Immortal","Godly","Gun","2026 Halloween"},{"Embersickle","Godly","Knife","2026 Halloween"},{"Batwing","Ancient","Knife"},{"Icewing","Ancient","Knife"},{"Hallowscythe","Ancient","Knife"},{"Harvester","Ancient","Gun"},{"Icepiercer","Ancient","Gun"},{"Nik's Scythe","Unique","Knife"}}
   local items={}; for _,v in ipairs(raw) do table.insert(items,{Name=v[1],Rarity=v[2],Type=v[3],Added=v[4]}) end
   local images={}
-  local function scan(t,d,seen) if type(t)~="table" or d>6 or seen[t] then return end; seen[t]=true; for _,v in pairs(t) do if type(v)=="table" then local n=v.ItemName or v.Name or v.name; if n then for _,it in ipairs(items) do if string.lower(tostring(n))==string.lower(it.Name) then local im=v.Image or v.ImageId or v.Icon or v.IconId; if im then im=tostring(im); if im:match("^%d+$") then im="rbxassetid://"..im end; if im:find("rbxassetid://",1,true) or im:find("rbxthumb://",1,true) then images[it.Name]=im end end end end; scan(v,d+1,seen) end end end end
-  pcall(function() local mods=game:GetService("ReplicatedStorage"):FindFirstChild("Modules"); if mods then for _,n in ipairs({"ItemModule","ItemData","ItemDataModule","InventoryModule"}) do local m=mods:FindFirstChild(n); if m and m:IsA("ModuleScript") then local ok,v=pcall(require,m); if ok and type(v)=="table" then scan(v,0,{}) end end end end end)
+  local imageFields={image=true,imageid=true,icon=true,iconid=true,image_id=true,icon_id=true,texture=true,textureid=true,assetid=true,imageasset=true,iconasset=true,thumbnail=true,thumb=true}
+  local function normalizeImage(value)
+   if type(value)=="number" then if value>0 then return "rbxassetid://"..tostring(math.floor(value)) end; return nil end
+   if type(value)~="string" then return nil end
+   local v=value:gsub("^%s+",""):gsub("%s+$","")
+   if v:match("^%d+$") then return "rbxassetid://"..v end
+   if v:match("^rbxassetid://%d+") or v:match("^rbxthumb://") then return v end
+   local id=v:match("[?&]id=(%d+)") or v:match("asset/(%d+)")
+   if id then return "rbxassetid://"..id end
+   return nil
+  end
+  local function assignItemImage(name,value)
+   local image=normalizeImage(value); if not image then return end
+   local wanted=string.lower(tostring(name or ""))
+   for _,it in ipairs(items) do if string.lower(it.Name)==wanted and not images[it.Name] then images[it.Name]=image; return end end
+  end
+  local function imageFromRecord(record)
+   if type(record)~="table" then return normalizeImage(record) end
+   for key,value in pairs(record) do
+    if type(key)=="string" and imageFields[string.lower(key)] then local image=normalizeImage(value); if image then return image end end
+   end
+   return nil
+  end
+  local function scan(t,depth,seen)
+   if type(t)~="table" or depth>9 or seen[t] then return end
+   seen[t]=true
+   for key,value in pairs(t) do
+    if type(key)=="string" then
+     local keyLower=string.lower(key)
+     for _,it in ipairs(items) do
+      if keyLower==string.lower(it.Name) then
+       local found=imageFromRecord(value)
+       if found then assignItemImage(it.Name,found) elseif type(value)=="string" or type(value)=="number" then assignItemImage(it.Name,value) end
+       break
+      end
+     end
+    end
+    if type(value)=="table" then
+     local itemName=value.ItemName or value.Name or value.name or value.DisplayName or value.Item
+     if itemName then local found=imageFromRecord(value); if found then assignItemImage(itemName,found) end end
+     scan(value,depth+1,seen)
+    end
+   end
+  end
+  pcall(function()
+   local replicated=game:GetService("ReplicatedStorage")
+   local moduleNames={itemmodule=true,itemdata=true,itemdatamodule=true,inventorymodule=true,iteminfo=true}
+   for _,module in ipairs(replicated:GetDescendants()) do
+    if module:IsA("ModuleScript") and moduleNames[string.lower(module.Name)] then
+     local ok,data=pcall(require,module)
+     if ok and type(data)=="table" then scan(data,0,{}) end
+    end
+   end
+  end)
+  pcall(function()
+   local playerGui=LocalPlayer:FindFirstChildOfClass("PlayerGui"); if not playerGui then return end
+   for _,imageObject in ipairs(playerGui:GetDescendants()) do
+    if imageObject:IsA("ImageLabel") or imageObject:IsA("ImageButton") then
+     local image=normalizeImage(imageObject.Image)
+     if image then
+      local pathText=string.lower(imageObject:GetFullName()):gsub("[^%w]","")
+      for _,it in ipairs(items) do local key=string.lower(it.Name):gsub("[^%w]",""); if key~="" and pathText:find(key,1,true) then assignItemImage(it.Name,image) end end
+     end
+    end
+   end
+  end)
   local search=Instance.new("TextBox"); search.Size=UDim2.new(1,-5,0,32); search.BackgroundColor3=Color3.fromRGB(12,16,27); search.PlaceholderText="Search Godly, Ancient, or Unique items"; search.Text=""; search.ClearTextOnFocus=false; search.TextColor3=Color3.new(1,1,1); search.Font=Enum.Font.Gotham; search.TextSize=10; search.Parent=page
   local list=Instance.new("ScrollingFrame"); list.Size=UDim2.new(1,-5,0,175); list.BackgroundColor3=Color3.fromRGB(7,10,18); list.BorderSizePixel=0; list.ScrollBarThickness=5; list.AutomaticCanvasSize=Enum.AutomaticSize.Y; list.CanvasSize=UDim2.new(); list.Parent=page
   local grid=Instance.new("UIGridLayout"); grid.CellSize=UDim2.new(.48,0,0,68); grid.CellPadding=UDim2.fromOffset(5,5); grid.Parent=list
@@ -3131,23 +3195,22 @@ do
    local candidates={}
    for _,obj in ipairs(playerGui:GetDescendants()) do
     if obj:IsA("ScrollingFrame") or obj:IsA("Frame") then
-     local name=string.lower(obj.Name)
-     local score=0
-     local ancestor=obj.Parent
-     local depth=0
-     while ancestor and ancestor~=playerGui and depth<6 do
+     local name=string.lower(obj.Name); local score=0; local ancestor=obj.Parent; local depth=0; local hasInventoryAncestor=false
+     while ancestor and ancestor~=playerGui and depth<8 do
       local ancestorName=string.lower(ancestor.Name)
-      if ancestorName:find("inventory",1,true) then score+=10 end
-      if ancestorName:find("item",1,true) or ancestorName:find("weapon",1,true) then score+=4 end
-      ancestor=ancestor.Parent
-      depth+=1
+      if ancestorName:find("inventory",1,true) then score+=18; hasInventoryAncestor=true end
+      if ancestorName:find("item",1,true) or ancestorName:find("weapon",1,true) then score+=5 end
+      ancestor=ancestor.Parent; depth+=1
      end
-     if name:find("inventory",1,true) then score+=10 end
-     if name:find("item",1,true) or name:find("weapon",1,true) then score+=6 end
-     if obj:FindFirstChildOfClass("UIGridLayout") then score+=5 end
-     if score>0 and obj.Visible and obj.AbsoluteSize.X>40 and obj.AbsoluteSize.Y>30 then
-      table.insert(candidates,{Object=obj,Score=score})
-     end
+     if name=="items" or name=="itemlist" or name=="itemcontainer" or name=="inventoryitems" then score+=24 end
+     if name:find("inventory",1,true) then score+=12 end
+     if name:find("item",1,true) or name:find("weapon",1,true) then score+=8 end
+     if obj:IsA("ScrollingFrame") then score+=8 end
+     if obj:FindFirstChildOfClass("UIGridLayout") then score+=25 end
+     local buttonCount=0
+     for _,child in ipairs(obj:GetChildren()) do if child:IsA("ImageButton") or child:IsA("TextButton") then buttonCount+=1 end end
+     score+=math.min(buttonCount,12)
+     if hasInventoryAncestor and obj.Visible and obj.AbsoluteSize.X>40 and obj.AbsoluteSize.Y>30 and score>0 then table.insert(candidates,{Object=obj,Score=score}) end
     end
    end
    table.sort(candidates,function(a,b) return a.Score>b.Score end)
@@ -3164,7 +3227,9 @@ do
    tile.AutoButtonColor=false
    tile.BackgroundColor3=Color3.fromRGB(24,27,39)
    tile.BorderSizePixel=0
-   tile.Image=""
+   tile.Image=images[it.Name] or ""
+   tile.ImageTransparency=0
+   tile.Visible=true
    tile.Parent=host
    if grid then
     tile.Size=grid.CellSize
@@ -3186,6 +3251,8 @@ do
     image.Position=UDim2.fromOffset(4,4)
     image.BackgroundTransparency=1
     image.Image=images[it.Name]
+    image.ImageTransparency=0
+    image.Visible=true
     image.ScaleType=Enum.ScaleType.Fit
     image.Parent=tile
    else
@@ -3227,7 +3294,7 @@ do
    local q=string.lower(search.Text); local count=0
    for _,it in ipairs(items) do if q=="" or string.find(string.lower(it.Name),q,1,true) or string.find(string.lower(it.Rarity),q,1,true) then count+=1
     local b=Instance.new("TextButton"); b.BackgroundColor3=Color3.fromRGB(15,18,29); b.Text=""; b.LayoutOrder=count; b.Parent=list
-    local im=Instance.new("ImageLabel"); im.Size=UDim2.fromOffset(42,42); im.Position=UDim2.fromOffset(5,13); im.BackgroundTransparency=1; im.ScaleType=Enum.ScaleType.Fit; im.Image=images[it.Name] or ""; im.Visible=images[it.Name]~=nil; im.Parent=b
+    local im=Instance.new("ImageLabel"); im.Size=UDim2.fromOffset(42,42); im.Position=UDim2.fromOffset(5,13); im.BackgroundTransparency=1; im.ScaleType=Enum.ScaleType.Fit; im.Image=images[it.Name] or ""; im.ImageTransparency=0; im.Visible=images[it.Name]~=nil; im.Parent=b
     local ph=Instance.new("TextLabel"); ph.Size=im.Size; ph.Position=im.Position; ph.BackgroundColor3=Color3.fromRGB(34,20,35); ph.Text=it.Type=="Gun" and "GUN" or "KNIFE"; ph.TextColor3=Color3.fromRGB(255,100,130); ph.Font=Enum.Font.GothamBlack; ph.TextSize=8; ph.Visible=images[it.Name]==nil; ph.Parent=b
     local nm=Instance.new("TextLabel"); nm.Size=UDim2.new(1,-52,0,32); nm.Position=UDim2.fromOffset(52,5); nm.BackgroundTransparency=1; nm.Text=it.Name; nm.TextColor3=Color3.new(1,1,1); nm.Font=Enum.Font.GothamBold; nm.TextSize=8; nm.TextWrapped=true; nm.Parent=b
     local rr=Instance.new("TextLabel"); rr.Size=UDim2.new(1,-52,0,18); rr.Position=UDim2.fromOffset(52,42); rr.BackgroundTransparency=1; rr.Text=it.Rarity.." • "..it.Type; rr.TextColor3=Color3.fromRGB(225,105,185); rr.Font=Enum.Font.Gotham; rr.TextSize=7; rr.Parent=b
