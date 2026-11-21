@@ -3177,7 +3177,10 @@ do
     end
    end
   end)
+   local lastLiveIconScan=0
    local function refreshLiveInventoryImages()
+    if os.clock()-lastLiveIconScan<1.5 then return end
+    lastLiveIconScan=os.clock()
     pcall(function()
      local playerGui=LocalPlayer:FindFirstChildOfClass("PlayerGui")
      if not playerGui then return end
@@ -3204,7 +3207,10 @@ do
      end
     end)
    end
+   local lastItemCardScan=0
    local function scanItemCardImages()
+    if os.clock()-lastItemCardScan<1.5 then return end
+    lastItemCardScan=os.clock()
     pcall(function()
      local playerGui=LocalPlayer:FindFirstChildOfClass("PlayerGui")
      if not playerGui then return end
@@ -3228,6 +3234,9 @@ do
      end
     end)
    end
+   local imageCount=0
+   for _,it in ipairs(items) do if images[it.Name] then imageCount+=1 end end
+   intro.Text="Visual-only preview • "..tostring(imageCount).."/"..tostring(#items).." item icons found"
      local search=Instance.new("TextBox"); search.Size=UDim2.new(1,-5,0,32); search.BackgroundColor3=Color3.fromRGB(12,16,27); search.PlaceholderText="Search Godly, Ancient, or Unique items"; search.Text=""; search.ClearTextOnFocus=false; search.TextColor3=Color3.new(1,1,1); search.Font=Enum.Font.Gotham; search.TextSize=10; search.Parent=page
   local list=Instance.new("ScrollingFrame"); list.Size=UDim2.new(1,-5,0,175); list.BackgroundColor3=Color3.fromRGB(7,10,18); list.BorderSizePixel=0; list.ScrollBarThickness=5; list.AutomaticCanvasSize=Enum.AutomaticSize.Y; list.CanvasSize=UDim2.new(); list.Parent=page
   local grid=Instance.new("UIGridLayout"); grid.CellSize=UDim2.new(.48,0,0,68); grid.CellPadding=UDim2.fromOffset(5,5); grid.Parent=list
@@ -3354,7 +3363,6 @@ do
 local function rebuild()
     refreshLiveInventoryImages()
     scanItemCardImages()
-    refreshLiveInventoryImages()
    for _,v in ipairs(list:GetChildren()) do if v:IsA("GuiButton") or v.Name=="NoMatch" then v:Destroy() end end
    local q=string.lower(search.Text); local count=0
    for _,it in ipairs(items) do if q=="" or string.find(string.lower(it.Name),q,1,true) or string.find(string.lower(it.Rarity),q,1,true) then count+=1
@@ -3387,6 +3395,18 @@ added[selected.Name]=true
    row.TextSize=8
    row.TextXAlignment=Enum.TextXAlignment.Left
    row.Parent=inv
+    if images[selected.Name] then
+     row.Text="     "..selected.Name.."  •  "..selected.Rarity.."  •  "..selected.Type.."  •  VISUAL ONLY"
+     local rowIcon=Instance.new("ImageLabel")
+     rowIcon.Name="VisualPreviewIcon"
+     rowIcon.Size=UDim2.fromOffset(25,25)
+     rowIcon.Position=UDim2.fromOffset(3,3)
+     rowIcon.BackgroundTransparency=1
+     rowIcon.Image=images[selected.Name]
+     rowIcon.ImageTransparency=0
+     rowIcon.ScaleType=Enum.ScaleType.Fit
+     rowIcon.Parent=row
+    end
    local rowCorner=Instance.new("UICorner")
    rowCorner.CornerRadius=UDim.new(0,5)
    rowCorner.Parent=row
