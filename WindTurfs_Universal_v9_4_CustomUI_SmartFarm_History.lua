@@ -3427,7 +3427,7 @@ do
         if Header then Header.BackgroundColor3=panel end
         if StatusStrip then StatusStrip.BackgroundColor3=panel end
         if _WT.HeaderLine then _WT.HeaderLine.BackgroundColor3=accent end
-        if _WT.Sidebar then _WT.Sidebar.BackgroundColor3=side; _WT.Sidebar.ScrollBarImageColor3=accent end
+        if Sidebar then Sidebar.BackgroundColor3=side; Sidebar.ScrollBarImageColor3=accent end
         for tabName,tabButton in pairs(TabButtons) do tabButton.BackgroundColor3=(tabName==State.CurrentTab) and accent or panel end
         if Title then Title.Text=tostring(State.MenuTitle or "WINDTURF"):sub(1,28); Title.TextColor3=accent end
         for _,obj in ipairs(MainGui:GetDescendants()) do
