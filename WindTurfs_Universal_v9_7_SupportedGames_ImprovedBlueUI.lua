@@ -1,7 +1,7 @@
 -- LANDSCAPE GAME-MODE / COMPACT MENU
 -- SMALL MENU / MENU-ONLY WALLPAPER PATCH
 --[[
-    WINDTURF MM2 / UNIVERSAL SCRIPT - COMBINED BUILD
+    WINDTURF UNIVERSAL SCRIPT - SUPPORTED GAMES BUILD
 ]]
 
 --[[
@@ -927,7 +927,7 @@ _WT.SidebarPadding.Parent = Sidebar
 _WT.SidebarBrand = Instance.new("TextLabel")
 _WT.SidebarBrand.Size = UDim2.new(1, -8, 0, 17)
 _WT.SidebarBrand.BackgroundTransparency = 1
-_WT.SidebarBrand.Text = "W  /  v8"
+_WT.SidebarBrand.Text = "W  /  v9.7"
 _WT.SidebarBrand.TextColor3 = Color3.fromRGB(255, 55, 78)
 _WT.SidebarBrand.Font = Enum.Font.GothamBlack
 _WT.SidebarBrand.TextSize = 8
@@ -2219,7 +2219,7 @@ do
     ndsStatus.TextWrapped=true; ndsStatus.Parent=nds
     button(nds,"Scan Hazard / Shelter Clues","Look for map objects with names commonly associated with hazards or shelter.",function()
         local hazards,shelters={},{}; local scanned=0
-        for _,obj in ipairs(Workspace:GetDescendants()) do
+        for _,obj in ipairs(workspace:GetDescendants()) do
             scanned+=1; if scanned>3500 then break end
             local n=string.lower(obj.Name or "")
             if n:find("tornado") or n:find("flood") or n:find("lava") or n:find("storm") or n:find("disaster") or n:find("fire") then
@@ -4143,7 +4143,7 @@ do
     title.Size = UDim2.new(1, -30, 0, 42)
     title.Position = UDim2.fromOffset(15, 100)
     title.BackgroundTransparency = 1
-    title.Text = "WINDTURF'S MM2"
+    title.Text = "WINDTURF UNIVERSAL"
     title.TextColor3 = Color3.fromRGB(235, 242, 255)
     title.Font = Enum.Font.GothamBlack
     title.TextSize = 22
