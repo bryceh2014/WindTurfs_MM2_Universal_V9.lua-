@@ -1488,7 +1488,7 @@ do
             _WT.NextBounceAt = enabled and 0 or nil
         end
     )
-    slider(page, "Bounce Rate", "Bounces per second.", "BounceRate", 1, 5, 0.5)
+    slider(page, "Bounce Rate", "Bounces per second.", "BounceRate", 1, 5, 1)
     slider(page, "Bounce Power", "Vertical launch strength for each bounce.", "BouncePower", 20, 55, 1)
 
     section(page, "SELF-LAUNCH")
@@ -3620,7 +3620,7 @@ do
     )
     noteCard(
         "ROLL / FEEDBACK",
-        "The roll could override your current animation pack if it does I am still currently setting up the suggestions with a discord webhook so feel free to tell me if you find any issues",
+        "the roll could override your current animation pack if it does I am still currently setting up the suggestions with a discord webhook so feel free to tell me if you find any issues",
         82
     )
     noteCard(
