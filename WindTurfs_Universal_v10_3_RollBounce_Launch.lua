@@ -979,7 +979,7 @@ local TabButtons = {}
 
 local TabInfo = {
     {"Combat", "⌂", "HOME"},
-    {"Launch", "➤", "FLING"},
+    {"Launch", "➤", "LAUNCH"},
     {"Coins", "◉", "COIN ESP"},
     {"MiniGames", "♙", "MINI GAMES"},
     {"Hunter", "●", "PLAYER"},
